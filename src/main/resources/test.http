@@ -1,0 +1,5 @@
+### 日志分页接口
+GET http://localhost:8080/log/page?pageNum=1&pageSize=10
+
+### 根据ID查询单条日志
+GET http://localhost:8080/log/1
