@@ -17,9 +17,13 @@ public class SysLogController {
 
     @GetMapping("/page")
     public Result<Page<SysLog>> page(@RequestParam(defaultValue = "1") Integer pageNum,
-                                     @RequestParam(defaultValue = "5") Integer pageSize) {
+                                      @RequestParam(defaultValue = "10") Integer pageSize,
+                                      @RequestParam(required = false) Integer logType) {
         Page<SysLog> page = new Page<>(pageNum, pageSize);
-        Page<SysLog> pageData = sysLogService.page(page, new LambdaQueryWrapper<>());
+        LambdaQueryWrapper<SysLog> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(logType != null, SysLog::getLogType, logType)
+                .orderByDesc(SysLog::getOperateTime);
+        Page<SysLog> pageData = sysLogService.page(page, wrapper);
         return Result.success(pageData);
     }
 
