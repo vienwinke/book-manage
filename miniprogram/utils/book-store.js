@@ -299,13 +299,14 @@ function addHistory(isbn, title, kind) {
   wx.setStorageSync(HISTORY_KEY, list.slice(0, 50))
 }
 
-// 上架成功后，把该 ISBN 最近一条扫码记录标记为“已上架”（合并记录，避免重复）
-function markShelf(isbn) {
+// 上架成功后，把该 ISBN 最近一条扫码记录标记为“已上架”，并回填书名（扫码时可能还是“未收录”）
+function markShelf(isbn, title) {
   const i = trimIsbn(isbn)
   const list = getHistory()
   const hit = list.find(h => h.isbn === i)
   if (hit) {
     hit.shelf = true
+    if (title) hit.title = title
     wx.setStorageSync(HISTORY_KEY, list)
   }
 }

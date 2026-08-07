@@ -110,7 +110,7 @@ Page({
       remark: f.remark,
       seller: '管理员'
     })
-    store.markShelf(this.data.isbn)
+    store.markShelf(this.data.isbn, f.title.trim())
     wx.showToast({ title: '已上架', icon: 'success' })
     this.load()
   },
