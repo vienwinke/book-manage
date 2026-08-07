@@ -38,9 +38,10 @@ CREATE TABLE book_info (
     version       VARCHAR(32)    DEFAULT NULL COMMENT '版次',
     quality       VARCHAR(32)    DEFAULT NULL COMMENT '成色',
     price         DECIMAL(10,2)  NOT NULL DEFAULT 0 COMMENT '售价',
+    stock         INT            NOT NULL DEFAULT 1 COMMENT '库存数量',
     seller_id     BIGINT         DEFAULT NULL COMMENT '卖家ID',
     seller_name   VARCHAR(50)    DEFAULT NULL COMMENT '卖家名',
-    book_status   TINYINT        NOT NULL DEFAULT 0 COMMENT '状态 0-在售 1-已售 2-下架',
+    book_status   TINYINT        NOT NULL DEFAULT 0 COMMENT '状态 0-在售 1-已售 2-下架/停售',
     remark        VARCHAR(256)   DEFAULT NULL COMMENT '备注',
     create_time   DATETIME       DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (id),
@@ -95,19 +96,19 @@ INSERT INTO sys_user (username, password, real_name, user_type, status) VALUES
 ('stu01', '$2a$10$1eAZNW4tuAOmtzpHsg8fieWhYSLwF7.IoshRuB6FXg5pcBcCAF/.2', '张三', 0, 1),
 ('stu02', '$2a$10$1eAZNW4tuAOmtzpHsg8fieWhYSLwF7.IoshRuB6FXg5pcBcCAF/.2', '李四', 0, 1);
 
--- 图书（卖家均为管理员）
-INSERT INTO book_info (book_name, author, isbn, category, version, quality, price, seller_id, seller_name, book_status, remark) VALUES
-('Java编程思想', 'Bruce Eckel', '9787111213826', '计算机', '第4版', '轻微磨损', 25.00, 1, '系统管理员', 0, '少量划线笔记'),
-('高等数学上册', '同济大学', '9787040091314', '教材', '第七版', '较旧', 12.00, 1, '系统管理员', 0, '无缺页'),
-('三体', '刘慈欣', '9787536692930', '科幻', '1版', '全新', 15.00, 1, '系统管理员', 1, '无笔记'),
-('百年孤独', '加西亚·马尔克斯', '9787544269982', '文学', '新版', '破损', 6.00, 1, '系统管理员', 2, '封底撕裂'),
-('数据结构（C语言版）', '严蔚敏', '9787302147510', '计算机', 'C语言版', '轻微磨损', 18.00, 1, '系统管理员', 0, NULL),
-('活着', '余华', '9787020002207', '文学', '精装', '全新', 10.00, 1, '系统管理员', 0, NULL),
-('深入理解计算机系统', 'Randal E. Bryant', '9787111600900', '计算机', '原书第3版', '轻微磨损', 35.00, 1, '系统管理员', 0, NULL);
+-- 图书（卖家均为管理员，三体/活着库存 0 显示缺货，百年孤独管理员下架）
+INSERT INTO book_info (book_name, author, isbn, category, version, quality, price, stock, seller_id, seller_name, book_status, remark) VALUES
+('Java编程思想', 'Bruce Eckel', '9787111213826', '计算机', '第4版', '轻微磨损', 25.00, 3, 1, '系统管理员', 0, '少量划线笔记'),
+('高等数学上册', '同济大学', '9787040091314', '教材', '第七版', '较旧', 12.00, 2, 1, '系统管理员', 0, '无缺页'),
+('三体', '刘慈欣', '9787536692930', '科幻', '1版', '全新', 15.00, 0, 1, '系统管理员', 0, '无笔记，缺货'),
+('百年孤独', '加西亚·马尔克斯', '9787544269982', '文学', '新版', '破损', 6.00, 1, 1, '系统管理员', 2, '封底撕裂'),
+('数据结构（C语言版）', '严蔚敏', '9787302147510', '计算机', 'C语言版', '轻微磨损', 18.00, 5, 1, '系统管理员', 0, NULL),
+('活着', '余华', '9787020002207', '文学', '精装', '全新', 10.00, 0, 1, '系统管理员', 0, '缺货'),
+('深入理解计算机系统', 'Randal E. Bryant', '9787111600900', '计算机', '原书第3版', '轻微磨损', 35.00, 1, 1, '系统管理员', 0, NULL);
 
--- 订单（演示数据）
+-- 订单（演示数据：三体/活着已成交，库存扣完自动停售）
 INSERT INTO trade_record (book_id, book_name, order_price, seller_id, seller_name, buyer_id, buyer_name, status, apply_time, done_time, remark) VALUES
 (3, '三体', 15.00, 1, '系统管理员', 3, '李四', 1, '2026-08-02 10:00:00', '2026-08-03 14:30:00', '已成交'),
-(6, '活着', 10.00, 1, '系统管理员', 2, '张三', 0, '2026-08-06 09:00:00', NULL, NULL);
+(6, '活着', 10.00, 1, '系统管理员', 2, '张三', 1, '2026-08-06 09:00:00', '2026-08-06 10:20:00', '已成交');
 
 SET FOREIGN_KEY_CHECKS = 1;

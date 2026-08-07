@@ -4,9 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.book.entity.BookInfo;
 import com.book.entity.TradeRecord;
+import com.book.entity.SysUser;
 import com.book.exception.BusinessException;
 import com.book.mapper.TradeRecordMapper;
 import com.book.service.BookInfoService;
+import com.book.service.SysUserService;
 import com.book.service.TradeRecordService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,12 +25,14 @@ public class TradeRecordServiceImpl extends ServiceImpl<TradeRecordMapper, Trade
     private static final int STATUS_CANCELLED = 2;
     private static final int STATUS_REJECTED = 3;
 
-    /** 图书状态：0-在售 1-已售 2-下架 */
+    /** 图书状态：0-在售 1-已售 2-下架/停售 */
     private static final int BOOK_ON_SALE = 0;
-    private static final int BOOK_SOLD = 1;
 
     @Autowired
     private BookInfoService bookInfoService;
+
+    @Autowired
+    private SysUserService sysUserService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -39,6 +43,9 @@ public class TradeRecordServiceImpl extends ServiceImpl<TradeRecordMapper, Trade
         }
         if (book.getBookStatus() == null || book.getBookStatus() != BOOK_ON_SALE) {
             throw new BusinessException("该图书不在售，无法购买");
+        }
+        if (book.getStock() == null || book.getStock() <= 0) {
+            throw new BusinessException("该图书缺货");
         }
         // 不能购买自己发布的图书
         if (book.getSellerId() != null && book.getSellerId().equals(record.getBuyerId())) {
@@ -56,6 +63,8 @@ public class TradeRecordServiceImpl extends ServiceImpl<TradeRecordMapper, Trade
         record.setOrderPrice(book.getPrice());
         record.setSellerId(book.getSellerId());
         record.setSellerName(book.getSellerName());
+        SysUser buyer = sysUserService.getById(record.getBuyerId());
+        record.setBuyerName(buyer != null ? buyer.getRealName() : null);
         record.setStatus(STATUS_PENDING);
         record.setApplyTime(LocalDateTime.now());
         save(record);
@@ -81,8 +90,9 @@ public class TradeRecordServiceImpl extends ServiceImpl<TradeRecordMapper, Trade
             record.setRemark(remark);
         }
         updateById(record);
-        // 成交后图书标记为已售出
-        book.setBookStatus(BOOK_SOLD);
+        // 成交后扣减库存；库存扣完不下架，仅在书库显示缺货（stock=0）
+        int stock = book.getStock() == null ? 0 : book.getStock();
+        book.setStock(Math.max(0, stock - 1));
         bookInfoService.updateById(book);
     }
 

@@ -1,297 +1,242 @@
-const BOOKS_KEY = 'ags_books'
+const api = require('./api')
+
 const HISTORY_KEY = 'ags_history'
-const ORDER_KEY = 'ags_orders'
-const LOGIN_KEY = 'ags_login'
+const USER_KEY = 'ags_user'
 
-// 内置示例：在售二手书（每本=一个在售条目，含价格与卖家）
-const BUILTIN_BOOKS = [
-  {
-    isbn: '9787111213826',
-    title: 'Java编程思想',
-    author: 'Bruce Eckel',
-    category: '计算机',
-    version: '第4版',
-    quality: '轻微磨损',
-    price: 25,
-    seller: '王学长',
-    status: 0,
-    remark: '少量划线笔记'
-  },
-  {
-    isbn: '9787040091314',
-    title: '高等数学上册',
-    author: '同济大学',
-    category: '教材',
-    version: '第七版',
-    quality: '较旧',
-    price: 12,
-    seller: '李学姐',
-    status: 0,
-    remark: '无缺页'
-  },
-  {
-    isbn: '9787536692930',
-    title: '三体',
-    author: '刘慈欣',
-    category: '科幻',
-    version: '1版',
-    quality: '全新',
-    price: 15,
-    seller: '张学长',
-    status: 0,
-    remark: '无笔记'
-  },
-  {
-    isbn: '9787544269982',
-    title: '百年孤独',
-    author: '加西亚·马尔克斯',
-    category: '文学',
-    version: '新版',
-    quality: '破损',
-    price: 6,
-    seller: '李学姐',
-    status: 0,
-    remark: '封底撕裂'
-  },
-  {
-    isbn: '9787302147510',
-    title: '数据结构（C语言版）',
-    author: '严蔚敏',
-    category: '计算机',
-    version: 'C语言版',
-    quality: '轻微磨损',
-    price: 18,
-    seller: '王学长',
-    status: 0,
-    remark: ''
-  },
-  {
-    isbn: '9787020002207',
-    title: '活着',
-    author: '余华',
-    category: '文学',
-    version: '精装',
-    quality: '全新',
-    price: 10,
-    seller: '张学长',
-    status: 0,
-    remark: ''
-  },
-  {
-    isbn: '9787111600900',
-    title: '深入理解计算机系统',
-    author: 'Randal E. Bryant',
-    category: '计算机',
-    version: '原书第3版',
-    quality: '轻微磨损',
-    price: 35,
-    seller: '王学长',
-    status: 0,
-    remark: ''
+// ---------- 登录态（后端账号密码） ----------
+function isLogin() {
+  return !!api.getToken()
+}
+
+function getUser() {
+  return wx.getStorageSync(USER_KEY) || null
+}
+
+function isAdmin() {
+  const u = getUser()
+  return !!u && u.userType === 1
+}
+
+function isUser() {
+  const u = getUser()
+  return !!u && u.userType === 0
+}
+
+function ownerName() {
+  const u = getUser()
+  return (u && (u.realName || u.username)) || ''
+}
+
+// 后端登录成功后写入本地登录态
+function setLogin(user) {
+  wx.setStorageSync(USER_KEY, user)
+}
+
+async function login(username, password) {
+  const data = await api.post('/auth/login', { username, password })
+  if (data && data.token && data.user) {
+    api.setToken(data.token)
+    setLogin(data.user)
+    return { ok: true, user: data.user }
   }
-]
-
-// ---------- 工具 ----------
-function pad(n) {
-  return n < 10 ? '0' + n : '' + n
+  return { ok: false, msg: '登录失败' }
 }
 
-// 统一使用本地时区字符串，避免 UTC 日期偏移
-function nowStr() {
-  const d = new Date()
-  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
-    ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes())
+async function logout() {
+  try {
+    await api.post('/auth/logout')
+  } catch (e) { /* 忽略 */ }
+  api.clearToken()
+  wx.removeStorageSync(USER_KEY)
 }
 
-function todayStr() {
-  return nowStr().slice(0, 10)
-}
-
-function trimIsbn(isbn) {
-  return String(isbn || '').trim()
-}
-
-function clone(obj) {
-  return JSON.parse(JSON.stringify(obj))
-}
-
-function genId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
-}
-
-// ---------- 图书（在售条目） ----------
-function getBooks() {
-  let list = wx.getStorageSync(BOOKS_KEY)
-  if (!list || !list.length) {
-    list = clone(BUILTIN_BOOKS)
-    wx.setStorageSync(BOOKS_KEY, list)
+// ---------- 图书（后端） ----------
+// 后端字段 → 小程序展示字段
+function mapBook(b) {
+  return {
+    id: b.id,
+    isbn: b.isbn || '',
+    title: b.bookName || '',
+    author: b.author || '',
+    category: b.category || '',
+    version: b.version || '',
+    quality: b.quality || '',
+    price: b.price,
+    stock: b.stock,
+    seller: b.sellerName || '',
+    sellerId: b.sellerId,
+    status: b.bookStatus,
+    remark: b.remark || '',
+    cover: ''
   }
-  return list
 }
 
-function saveBooks(list) {
-  wx.setStorageSync(BOOKS_KEY, list)
+// 在售列表（书库）
+async function onSaleList(keyword) {
+  const params = { pageNum: 1, pageSize: 100, bookStatus: 0 }
+  if (keyword) params.bookName = keyword
+  const data = await api.get('/book/page', params)
+  const records = (data && data.records) || []
+  const list = records.map(mapBook)
+  const kw = (keyword || '').trim().toLowerCase()
+  return kw ? list.filter(b =>
+    (b.title || '').toLowerCase().includes(kw) ||
+    (b.author || '').toLowerCase().includes(kw) ||
+    (b.isbn || '').includes(kw) ||
+    (b.seller || '').includes(kw)) : list
 }
 
-function findBook(isbn) {
-  const i = trimIsbn(isbn)
-  if (!i) return null
-  return getBooks().find(b => b.isbn === i) || null
+// 全部图书（管理员本地书库）
+async function allBooks() {
+  const data = await api.get('/book/page', { pageNum: 1, pageSize: 100 })
+  return ((data && data.records) || []).map(mapBook)
 }
 
-function onSaleList() {
-  return getBooks().filter(b => b.status === 0)
+// 按 ISBN 查一本书（详情页/扫码）
+async function findBookByIsbn(isbn) {
+  if (!isbn) return null
+  const data = await api.get('/book/page', { pageNum: 1, pageSize: 1, isbn })
+  const records = (data && data.records) || []
+  return records.length ? mapBook(records[0]) : null
 }
 
-function publishBook(data) {
-  const isbn = trimIsbn(data.isbn)
-  const list = getBooks()
-  const idx = list.findIndex(b => b.isbn === isbn)
-  const book = {
-    isbn: isbn,
-    title: (data.title || '').trim() || '未知书名',
-    author: (data.author || '').trim() || '未知',
-    category: (data.category || '').trim() || '未分类',
-    version: data.version || '',
-    quality: data.quality || '',
-    price: Math.max(0, Number(data.price) || 0),
-    seller: (data.seller || '').trim() || '同学',
-    cover: data.cover || '',
-    publisher: data.publisher || '',
-    publishedDate: data.publishedDate || '',
-    remark: (data.remark || '').trim(),
-    status: 0,
-    createTime: nowStr()
-  }
-  if (idx >= 0) {
-    Object.assign(list[idx], book)
-  } else {
-    list.unshift(book)
-  }
-  saveBooks(list)
-  return book
+// 按 id 查一本书（订单点击进详情）
+async function findBookById(id) {
+  if (!id) return null
+  const data = await api.get('/book/' + id)
+  return data ? mapBook(data) : null
 }
 
-function setBookStatus(isbn, status) {
-  const list = getBooks()
-  const idx = list.findIndex(b => b.isbn === trimIsbn(isbn))
-  if (idx < 0) return { ok: false, msg: '图书不存在' }
-  list[idx].status = status
-  saveBooks(list)
+// 管理员上架
+async function publishBook(form) {
+  await api.post('/book/add', {
+    bookName: form.title,
+    author: form.author,
+    isbn: form.isbn,
+    category: form.category,
+    version: form.version,
+    quality: form.quality,
+    price: form.price,
+    stock: form.stock,
+    remark: form.remark,
+    bookStatus: 0
+  })
   return { ok: true }
 }
 
-// 修改图书信息（书名/作者/分类/版次/成色/价格/备注，传入的字段才更新）
-function updateBook(isbn, data) {
-  const list = getBooks()
-  const idx = list.findIndex(b => b.isbn === trimIsbn(isbn))
-  if (idx < 0) return { ok: false, msg: '图书不存在' }
-  const b = list[idx]
-  if (data.title !== undefined) b.title = (data.title || '').trim() || b.title
-  if (data.author !== undefined) b.author = (data.author || '').trim()
-  if (data.category !== undefined) b.category = (data.category || '').trim()
-  if (data.version !== undefined) b.version = data.version || ''
-  if (data.quality !== undefined) b.quality = data.quality || ''
-  if (data.price !== undefined) b.price = Math.max(0, Number(data.price) || 0)
-  if (data.remark !== undefined) b.remark = (data.remark || '').trim()
-  saveBooks(list)
+// 修改图书信息（按 ISBN 找到 id 后更新）
+async function updateBookByIsbn(isbn, form) {
+  const book = await findBookByIsbn(isbn)
+  if (!book) return { ok: false, msg: '图书不存在' }
+  await api.put('/book/update', {
+    id: book.id,
+    bookName: form.title,
+    author: form.author,
+    category: form.category,
+    version: form.version,
+    quality: form.quality,
+    price: form.price,
+    stock: form.stock,
+    remark: form.remark
+  })
   return { ok: true }
 }
 
-function removeBook(isbn) {
-  saveBooks(getBooks().filter(b => b.isbn !== trimIsbn(isbn)))
+// 设置图书状态（下架2/重新上架0/已售1）
+async function setBookStatusByIsbn(isbn, status) {
+  const book = await findBookByIsbn(isbn)
+  if (!book) return { ok: false, msg: '图书不存在' }
+  await api.put('/book/update', { id: book.id, bookStatus: status })
+  return { ok: true }
 }
 
-function myBooks(seller) {
-  return getBooks().filter(b => b.seller === seller)
+// 删除图书（按 ISBN）
+async function removeBookByIsbn(isbn) {
+  const book = await findBookByIsbn(isbn)
+  if (!book) return { ok: false, msg: '图书不存在' }
+  await api.del('/book/delete/' + book.id)
+  return { ok: true }
 }
 
-// ---------- 订单（买卖，暂不涉及付款） ----------
-// 状态：0-待确认 1-已成交 2-已取消 3-已拒绝
-function getOrders() {
-  return wx.getStorageSync(ORDER_KEY) || []
+// 我发布的（普通用户卖家身份查）
+async function myBooks() {
+  const u = getUser()
+  if (!u) return []
+  const data = await api.get('/book/page', { pageNum: 1, pageSize: 100, sellerId: u.id })
+  return ((data && data.records) || []).map(mapBook)
 }
 
-function saveOrders(list) {
-  wx.setStorageSync(ORDER_KEY, list)
+// ---------- 订单（后端） ----------
+function mapOrder(o) {
+  return {
+    id: o.id,
+    bookId: o.bookId,
+    title: o.bookName || '',
+    price: o.orderPrice,
+    buyer: o.buyerName || '',
+    buyerId: o.buyerId,
+    seller: o.sellerName || '',
+    sellerId: o.sellerId,
+    status: o.status,
+    statusText: ORDER_STATUS[o.status] || '',
+    applyTime: (o.applyTime || '').replace('T', ' ').slice(0, 16),
+    doneTime: (o.doneTime || '').replace('T', ' ').slice(0, 16)
+  }
 }
 
-function activeOrderFor(isbn) {
-  return getOrders().find(o => o.isbn === trimIsbn(isbn) && o.status === 0) || null
+const ORDER_STATUS = { 0: '待确认', 1: '已成交', 2: '已取消', 3: '已拒绝' }
+
+// 当前用户订单（普通用户后端自动只查自己的，管理员查全部）
+async function getOrders(status) {
+  const params = { pageNum: 1, pageSize: 100 }
+  if (status !== undefined && status !== null && status !== 'all') params.status = status
+  const data = await api.get('/order/page', params)
+  return ((data && data.records) || []).map(mapOrder)
 }
 
-function ordersFor(isbn) {
-  return getOrders().filter(o => o.isbn === trimIsbn(isbn))
+// 某本书的待确认订单（详情页展示）
+async function activeOrderFor(isbn) {
+  const book = await findBookByIsbn(isbn)
+  if (!book) return null
+  const data = await api.get('/order/page', { pageNum: 1, pageSize: 1, status: 0 })
+  const records = (data && data.records) || []
+  const hit = records.find(o => o.bookId === book.id)
+  return hit ? mapOrder(hit) : null
 }
 
-function myOrders(buyer) {
-  return getOrders().filter(o => o.buyer === buyer)
-}
-
-function applyOrder(isbn, buyer) {
-  const book = findBook(isbn)
+// 下单购买（isbn → bookId）
+async function applyOrder(isbn) {
+  const book = await findBookByIsbn(isbn)
   if (!book) return { ok: false, msg: '图书不存在' }
   if (book.status !== 0) return { ok: false, msg: '该书已售出或已下架' }
-  if (book.seller === buyer) return { ok: false, msg: '不能购买自己发布的图书' }
-  if (activeOrderFor(isbn)) return { ok: false, msg: '该书已有待确认订单' }
-  const order = {
-    id: genId(),
-    isbn: book.isbn,
-    title: book.title,
-    price: book.price,
-    buyer: buyer,
-    seller: book.seller,
-    status: 0,
-    applyTime: nowStr(),
-    doneTime: ''
-  }
-  const list = getOrders()
-  list.unshift(order)
-  saveOrders(list)
-  return { ok: true, msg: '已下单，等待卖家确认', order }
+  await api.post('/order/apply', { bookId: book.id })
+  return { ok: true, msg: '已下单，等待管理员确认' }
 }
 
-function confirmOrder(id) {
-  const list = getOrders()
-  const order = list.find(o => o.id === id)
-  if (!order || order.status !== 0) return { ok: false, msg: '订单不存在或非待确认状态' }
-  order.status = 1
-  order.doneTime = nowStr()
-  saveOrders(list)
-  setBookStatus(order.isbn, 1) // 成交后图书标记为已售出
-  return { ok: true, msg: '已确认成交，图书已售出' }
-}
-
-function rejectOrder(id) {
-  const list = getOrders()
-  const order = list.find(o => o.id === id)
-  if (!order || order.status !== 0) return { ok: false, msg: '订单不存在或非待确认状态' }
-  order.status = 3
-  order.doneTime = nowStr()
-  saveOrders(list)
-  return { ok: true, msg: '已拒绝该订单' }
-}
-
-function cancelOrder(id) {
-  const list = getOrders()
-  const order = list.find(o => o.id === id)
-  if (!order || order.status !== 0) return { ok: false, msg: '订单不存在或非待确认状态' }
-  order.status = 2
-  order.doneTime = nowStr()
-  saveOrders(list)
+async function cancelOrder(id) {
+  await api.post('/order/cancel/' + id)
   return { ok: true, msg: '已取消订单' }
 }
 
-// ---------- 扫码历史 ----------
+async function confirmOrder(id) {
+  await api.post('/order/confirm/' + id, {})
+  return { ok: true, msg: '已确认成交，图书已售出' }
+}
+
+async function rejectOrder(id) {
+  await api.post('/order/reject/' + id, {})
+  return { ok: true, msg: '已拒绝该订单' }
+}
+
+// ---------- 扫码历史（本地） ----------
 function getHistory() {
   return wx.getStorageSync(HISTORY_KEY) || []
 }
 
-// kind: 'scan' 仅识别 | 'shelf' 上架 | 'delete' 删除
 function addHistory(isbn, title, kind) {
   const list = getHistory()
   list.unshift({
-    isbn: trimIsbn(isbn),
+    isbn: (isbn || '').trim(),
     title: title || '未知书名',
     shelf: kind === 'shelf',
     time: nowStr()
@@ -299,9 +244,8 @@ function addHistory(isbn, title, kind) {
   wx.setStorageSync(HISTORY_KEY, list.slice(0, 50))
 }
 
-// 上架成功后，把该 ISBN 最近一条扫码记录标记为“已上架”，并回填书名（扫码时可能还是“未收录”）
 function markShelf(isbn, title) {
-  const i = trimIsbn(isbn)
+  const i = (isbn || '').trim()
   const list = getHistory()
   const hit = list.find(h => h.isbn === i)
   if (hit) {
@@ -321,40 +265,18 @@ function getStats() {
   }
 }
 
-// ---------- 登录 ----------
-function isLogin() {
-  return !!getLogin()
+function pad(n) {
+  return n < 10 ? '0' + n : '' + n
 }
 
-function getLogin() {
-  return wx.getStorageSync(LOGIN_KEY) || null
+function nowStr() {
+  const d = new Date()
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+    ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes())
 }
 
-function setLogin(role, name) {
-  wx.setStorageSync(LOGIN_KEY, {
-    role: role,
-    name: (name || '').trim() || '同学',
-    time: Date.now()
-  })
-}
-
-function logout() {
-  wx.removeStorageSync(LOGIN_KEY)
-}
-
-function isAdmin() {
-  const l = getLogin()
-  return !!l && l.role === 'admin'
-}
-
-function isUser() {
-  const l = getLogin()
-  return !!l && (l.role === 'user' || l.role === 'student')
-}
-
-function ownerName() {
-  const l = getLogin()
-  return (l && l.name) || '同学'
+function todayStr() {
+  return nowStr().slice(0, 10)
 }
 
 function timeStr(t) {
@@ -362,32 +284,32 @@ function timeStr(t) {
 }
 
 module.exports = {
-  getBooks,
+  isLogin,
+  getUser,
+  isAdmin,
+  isUser,
+  ownerName,
+  login,
+  logout,
+  setLogin,
   onSaleList,
-  findBook,
+  findBookByIsbn,
+  findBookById,
+  allBooks,
   publishBook,
-  setBookStatus,
-  updateBook,
-  removeBook,
+  updateBookByIsbn,
+  setBookStatusByIsbn,
+  removeBookByIsbn,
   myBooks,
   getOrders,
   activeOrderFor,
-  ordersFor,
-  myOrders,
   applyOrder,
+  cancelOrder,
   confirmOrder,
   rejectOrder,
-  cancelOrder,
   getHistory,
   addHistory,
   markShelf,
   getStats,
-  isLogin,
-  getLogin,
-  setLogin,
-  logout,
-  isAdmin,
-  isUser,
-  ownerName,
   timeStr
 }

@@ -60,13 +60,18 @@ Page({
     this.lookup(isbn)
   },
 
-  lookup(isbn) {
-    const book = store.findBook(isbn)
-    store.addHistory(isbn, book ? book.title : '未收录', 'scan')
-    this.refresh()
-    wx.navigateTo({
-      url: '/pages/detail/detail?isbn=' + encodeURIComponent(isbn)
-    })
+  async lookup(isbn) {
+    wx.showLoading({ title: '查询中...' })
+    try {
+      const book = await store.findBookByIsbn(isbn)
+      store.addHistory(isbn, book ? book.title : '未收录', 'scan')
+      this.refresh()
+      wx.navigateTo({
+        url: '/pages/detail/detail?isbn=' + encodeURIComponent(isbn)
+      })
+    } finally {
+      wx.hideLoading()
+    }
   },
 
   openDetail(e) {

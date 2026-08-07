@@ -1,0 +1,26 @@
+<view class="tabs" wx:if="{{isAdmin}}">
+  <view class="tab {{activeTab === item.key ? 'tab-active' : ''}}"
+        wx:for="{{tabs}}" wx:key="key"
+        data-key="{{item.key}}" bindtap="onTab">{{item.label}}</view>
+</view>
+
+<view class="card">
+  <view class="card-title">
+    {{isAdmin ? '全部订单（共 ' + filtered.length + ' 笔）' : '我的订单（共 ' + filtered.length + ' 笔）'}}
+  </view>
+  <view class="empty" wx:if="{{!filtered.length}}">暂无订单</view>
+  <view class="row-item" wx:for="{{filtered}}" wx:key="id" data-book-id="{{item.bookId}}" bindtap="openDetail">
+    <view class="r-info">
+      <view class="r-title">{{item.title}} <text class="r-price">¥{{item.price}}</text></view>
+      <view class="r-sub" wx:if="{{isAdmin}}">{{item.buyer}} 买 · {{item.seller}} 卖 · {{item.applyTime}}</view>
+      <view class="r-sub" wx:elif="{{item.sellerId === myId}}">我卖 · {{item.buyer}} 买 · {{item.applyTime}}</view>
+      <view class="r-sub" wx:else>我买 · {{item.seller}} 卖 · {{item.applyTime}}</view>
+    </view>
+    <view class="r-btns" wx:if="{{item.status === 0 && (isAdmin || item.sellerId === myId)}}">
+      <button class="btn btn-success r-btn" size="mini" data-id="{{item.id}}" catchtap="doConfirm">成交</button>
+      <button class="btn btn-danger r-btn" size="mini" data-id="{{item.id}}" catchtap="doReject">拒绝</button>
+    </view>
+    <button class="btn btn-danger r-btn" size="mini" wx:if="{{item.status === 0 && !isAdmin && item.buyerId === myId}}" data-id="{{item.id}}" catchtap="doCancel">取消</button>
+    <view class="tag {{item.status === 0 ? 'tag-warn' : (item.status === 1 ? 'tag-success' : 'tag-plain')}}">{{item.statusText}}</view>
+  </view>
+</view>

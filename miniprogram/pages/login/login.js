@@ -2,8 +2,9 @@ const store = require('../../utils/book-store')
 
 Page({
   data: {
-    role: '',
-    name: ''
+    username: '',
+    password: '',
+    loading: false
   },
 
   onLoad() {
@@ -12,17 +13,36 @@ Page({
     }
   },
 
-  selectRole(e) {
-    this.setData({ role: e.currentTarget.dataset.role })
+  onUsernameInput(e) {
+    this.setData({ username: e.detail.value })
   },
 
-  onNameInput(e) {
-    this.setData({ name: e.detail.value })
+  onPasswordInput(e) {
+    this.setData({ password: e.detail.value })
   },
 
-  doLogin() {
-    if (!this.data.role) return
-    store.setLogin(this.data.role, this.data.name)
-    wx.reLaunch({ url: '/pages/index/index' })
+  goRegister() {
+    wx.navigateTo({ url: '/pages/register/register' })
+  },
+
+  async doLogin() {
+    const username = this.data.username.trim()
+    const password = this.data.password
+    if (!username || !password) {
+      wx.showToast({ title: '请输入账号和密码', icon: 'none' })
+      return
+    }
+    this.setData({ loading: true })
+    try {
+      const r = await store.login(username, password)
+      if (r.ok) {
+        wx.showToast({ title: '登录成功', icon: 'success' })
+        setTimeout(() => wx.reLaunch({ url: '/pages/index/index' }), 500)
+      }
+    } catch (e) {
+      // 错误已由 api 层提示
+    } finally {
+      this.setData({ loading: false })
+    }
   }
 })

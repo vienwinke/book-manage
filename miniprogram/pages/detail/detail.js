@@ -1,7 +1,11 @@
 const store = require('../../utils/book-store')
-const bookApi = require('../../utils/book-api')
 
 const STATUS_TEXT = { 0: '在售', 1: '已售出', 2: '已下架' }
+
+function bookStatusText(b) {
+  if (b.status === 0 && b.stock <= 0) return '缺货'
+  return STATUS_TEXT[b.status] || ''
+}
 
 Page({
   data: {
@@ -14,10 +18,8 @@ Page({
     canManage: false,
     myOrder: null,
     editMode: false,
-    editForm: { title: '', author: '', category: '', version: '', quality: '', price: '', remark: '' },
-    loadingRemote: false,
-    remoteMsg: '',
-    form: { title: '', author: '', category: '', price: '', remark: '' }
+    editForm: { title: '', author: '', category: '', version: '', quality: '', price: '', stock: '', remark: '' },
+    form: { title: '', author: '', category: '', price: '', stock: '', remark: '' }
   },
 
   onLoad(query) {
@@ -35,7 +37,6 @@ Page({
     })
     if (isbn) {
       this.load()
-      this.fetchRemote()
     }
   },
 
@@ -44,108 +45,97 @@ Page({
     if (this.data.isbn) this.load()
   },
 
-  load() {
-    const book = store.findBook(this.data.isbn)
-    if (book) {
-      this.setData({
-        found: true,
-        book: Object.assign({}, book, { statusText: STATUS_TEXT[book.status] || '' }),
-        myOrder: store.activeOrderFor(book.isbn),
-        canManage: this.data.isAdmin || book.seller === this.data.owner
-      })
-    } else {
-      this.setData({ found: false, book: null, myOrder: null, canManage: false })
+  async load() {
+    const isbn = this.data.isbn
+    if (!isbn) return
+    try {
+      const book = await store.findBookByIsbn(isbn)
+      if (book) {
+        book.statusText = bookStatusText(book)
+        const myOrder = await store.activeOrderFor(book.isbn)
+        const me = store.getUser()
+        const isOwner = !!(me && me.id && book.sellerId === me.id)
+        this.setData({
+          found: true,
+          book,
+          myOrder,
+          canManage: this.data.isAdmin || isOwner
+        })
+      } else {
+        this.setData({ found: false, book: null, myOrder: null, canManage: false })
+      }
+    } catch (e) {
+      // api 层已提示
     }
   },
 
-  // 扫码后云端自动识别书籍信息
-  fetchRemote() {
-    this.setData({ loadingRemote: true, remoteMsg: '' })
-    bookApi.fetchByIsbn(this.data.isbn)
-      .then(info => {
-        if (!info || !info.title) {
-          this.setData({ loadingRemote: false, remoteMsg: '未从云端识别到该书，可手动填写' })
-          return
-        }
-        if (this.data.found && this.data.book) {
-          // 本地已有：合并展示（不覆盖价格/卖家等本地字段）
-          const b = Object.assign({}, this.data.book, info)
-          b.title = this.data.book.title || info.title
-          this.setData({ book: b, loadingRemote: false })
-        } else {
-          // 本地没有：自动填充表单，仅需确认后上架
-          this.setData({
-            loadingRemote: false,
-            remoteInfo: info,
-            'form.title': this.data.form.title || info.title,
-            'form.author': this.data.form.author || info.author,
-            'form.category': this.data.form.category || info.category,
-            'form.cover': info.cover
-          })
-        }
-      })
-      .catch(() => this.setData({
-        loadingRemote: false,
-        remoteMsg: '云端识别失败：开发者工具需勾选「不校验合法域名」'
-      }))
-  },
-
+  // 扫码后从本地库（后端 book_info 表）查书
   onFormInput(e) {
     const field = e.currentTarget.dataset.field
     this.setData({ ['form.' + field]: e.detail.value })
   },
 
-  publish() {
+  async publish() {
     const f = this.data.form
     if (!f.title.trim()) {
       wx.showToast({ title: '请填写书名', icon: 'none' })
       return
     }
-    store.publishBook({
-      isbn: this.data.isbn,
-      title: f.title,
-      author: f.author,
-      category: f.category,
-      price: f.price,
-      remark: f.remark,
-      seller: '管理员'
-    })
-    store.markShelf(this.data.isbn, f.title.trim())
-    wx.showToast({ title: '已上架', icon: 'success' })
-    this.load()
+    try {
+      const r = await store.publishBook({
+        isbn: this.data.isbn,
+        title: f.title,
+        author: f.author,
+        category: f.category,
+        version: f.version,
+        quality: f.quality,
+        price: f.price,
+        stock: f.stock,
+        remark: f.remark
+      })
+      store.markShelf(this.data.isbn, f.title.trim())
+      wx.showToast({ title: '已上架', icon: 'success' })
+      this.load()
+    } catch (e) { /* 已提示 */ }
   },
 
-  shelfOff() {
-    const r = store.setBookStatus(this.data.isbn, 2)
-    wx.showToast({ title: r.ok ? '已下架' : r.msg, icon: 'none' })
-    if (r.ok) this.load()
+  async shelfOff() {
+    try {
+      await store.setBookStatusByIsbn(this.data.isbn, 2)
+      wx.showToast({ title: '已下架', icon: 'success' })
+      this.load()
+    } catch (e) { /* 已提示 */ }
   },
 
-  removeBook() {
+  async removeBook() {
     wx.showModal({
       title: '删除图书',
       content: '确定删除该 ISBN 对应的图书吗？',
-      success: res => {
+      success: async res => {
         if (res.confirm) {
-          store.removeBook(this.data.isbn)
-          store.addHistory(this.data.isbn, (this.data.book && this.data.book.title) || '', 'delete')
-          wx.showToast({ title: '已删除', icon: 'success' })
-          setTimeout(() => wx.navigateBack(), 600)
+          try {
+            await store.removeBookByIsbn(this.data.isbn)
+            store.addHistory(this.data.isbn, (this.data.book && this.data.book.title) || '', 'delete')
+            wx.showToast({ title: '已删除', icon: 'success' })
+            setTimeout(() => wx.navigateBack(), 600)
+          } catch (e) { /* 已提示 */ }
         }
       }
     })
   },
 
   // 重新上架（已下架/已售出 → 在售）
-  relist() {
+  async relist() {
     wx.showModal({
       title: '重新上架',
       content: '确定将这本书重新上架出售吗？',
-      success: res => {
+      success: async res => {
         if (!res.confirm) return
-        const r = store.setBookStatus(this.data.isbn, 0)
-        wx.showToast({ title: r.ok ? '已重新上架' : r.msg, icon: r.ok ? 'success' : 'none' })
-        if (r.ok) this.load()
+        try {
+          await store.setBookStatusByIsbn(this.data.isbn, 0)
+          wx.showToast({ title: '已重新上架', icon: 'success' })
+          this.load()
+        } catch (e) { /* 已提示 */ }
       }
     })
   },
@@ -162,6 +152,7 @@ Page({
         version: b.version || '',
         quality: b.quality || '',
         price: String(b.price),
+        stock: b.stock == null ? '' : String(b.stock),
         remark: b.remark || ''
       }
     })
@@ -172,58 +163,71 @@ Page({
     this.setData({ ['editForm.' + field]: e.detail.value })
   },
 
-  saveEdit() {
+  async saveEdit() {
     const f = this.data.editForm
     if (!f.title.trim()) {
       wx.showToast({ title: '书名不能为空', icon: 'none' })
       return
     }
-    const r = store.updateBook(this.data.isbn, {
-      title: f.title,
-      author: f.author,
-      category: f.category,
-      version: f.version,
-      quality: f.quality,
-      price: f.price,
-      remark: f.remark
-    })
-    wx.showToast({ title: r.ok ? '已保存' : r.msg, icon: r.ok ? 'success' : 'none' })
-    if (r.ok) {
+    try {
+      const r = await store.updateBookByIsbn(this.data.isbn, {
+        title: f.title,
+        author: f.author,
+        category: f.category,
+        version: f.version,
+        quality: f.quality,
+        price: f.price,
+        stock: f.stock,
+        remark: f.remark
+      })
+      if (!r.ok) {
+        wx.showToast({ title: r.msg, icon: 'none' })
+        return
+      }
+      wx.showToast({ title: '已保存', icon: 'success' })
       this.setData({ editMode: false })
       this.load()
-    }
+    } catch (e) { /* 已提示 */ }
   },
 
   cancelEdit() {
     this.setData({ editMode: false })
   },
 
-  buy() {
-    const r = store.applyOrder(this.data.isbn, store.ownerName())
-    wx.showToast({ title: r.msg, icon: r.ok ? 'success' : 'none' })
-    if (r.ok) this.load()
+  async buy() {
+    try {
+      const r = await store.applyOrder(this.data.isbn)
+      wx.showToast({ title: r.msg, icon: 'success' })
+      if (r.ok) this.load()
+    } catch (e) { /* 已提示 */ }
   },
 
-  cancelOrder() {
+  async cancelOrder() {
     const o = this.data.myOrder
     if (!o) return
-    const r = store.cancelOrder(o.id)
-    wx.showToast({ title: r.msg, icon: r.ok ? 'success' : 'none' })
-    if (r.ok) {
-      this.setData({ myOrder: null })
-      this.load()
-    }
+    try {
+      const r = await store.cancelOrder(o.id)
+      wx.showToast({ title: r.msg, icon: 'success' })
+      if (r.ok) {
+        this.setData({ myOrder: null })
+        this.load()
+      }
+    } catch (e) { /* 已提示 */ }
   },
 
-  confirmOrder(e) {
-    const r = store.confirmOrder(e.currentTarget.dataset.id)
-    wx.showToast({ title: r.msg, icon: r.ok ? 'success' : 'none' })
-    if (r.ok) this.load()
+  async confirmOrder(e) {
+    try {
+      const r = await store.confirmOrder(e.currentTarget.dataset.id)
+      wx.showToast({ title: r.msg, icon: 'success' })
+      if (r.ok) this.load()
+    } catch (e) { /* 已提示 */ }
   },
 
-  rejectOrder(e) {
-    const r = store.rejectOrder(e.currentTarget.dataset.id)
-    wx.showToast({ title: r.msg, icon: 'none' })
-    if (r.ok) this.load()
+  async rejectOrder(e) {
+    try {
+      const r = await store.rejectOrder(e.currentTarget.dataset.id)
+      wx.showToast({ title: r.msg, icon: 'none' })
+      if (r.ok) this.load()
+    } catch (e) { /* 已提示 */ }
   }
 })

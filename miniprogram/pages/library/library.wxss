@@ -54,6 +54,10 @@
   margin-top: 6rpx;
 }
 
+.book-soldout {
+  color: #f56c6c;
+}
+
 .book-total {
   color: #909399;
   font-size: 22rpx;

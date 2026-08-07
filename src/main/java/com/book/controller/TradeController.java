@@ -35,9 +35,11 @@ public class TradeController {
         wrapper.eq(status != null, TradeRecord::getStatus, status)
                 .eq(buyerId != null, TradeRecord::getBuyerId, buyerId)
                 .orderByDesc(TradeRecord::getApplyTime);
-        // 越权防护：非管理员只能查自己的订单
+        // 越权防护：非管理员只能查自己相关订单（自己买的或自己卖的）
         if (!StpUtil.hasRole("admin")) {
-            wrapper.eq(TradeRecord::getBuyerId, StpUtil.getLoginIdAsLong());
+            Long loginId = StpUtil.getLoginIdAsLong();
+            wrapper.and(w -> w.eq(TradeRecord::getBuyerId, loginId)
+                    .or().eq(TradeRecord::getSellerId, loginId));
         }
         Page<TradeRecord> pageData = tradeRecordService.page(page, wrapper);
         return Result.success(pageData);
@@ -49,9 +51,14 @@ public class TradeController {
         if (record == null) {
             return Result.success(null);
         }
-        // 越权防护：非管理员只能查看自己的订单
-        if (!StpUtil.hasRole("admin") && !record.getBuyerId().equals(StpUtil.getLoginIdAsLong())) {
-            throw new BusinessException("无权查看该订单");
+        // 越权防护：非管理员只能查看自己相关订单（自己买的或自己卖的）
+        if (!StpUtil.hasRole("admin")) {
+            Long loginId = StpUtil.getLoginIdAsLong();
+            boolean related = (record.getBuyerId() != null && record.getBuyerId().equals(loginId))
+                    || (record.getSellerId() != null && record.getSellerId().equals(loginId));
+            if (!related) {
+                throw new BusinessException("无权查看该订单");
+            }
         }
         return Result.success(record);
     }
@@ -71,22 +78,39 @@ public class TradeController {
         return Result.success();
     }
 
-    // 管理员/卖家确认成交
+    // 卖家/管理员确认成交
     @OpLog(description = "确认成交", type = 2)
     @PostMapping("/confirm/{id}")
     public Result<Void> confirm(@PathVariable Long id,
                                 @RequestBody(required = false) Map<String, String> body) {
+        checkSellerOrAdmin(id);
         tradeRecordService.confirm(id, body == null ? null : body.get("remark"));
         return Result.success();
     }
 
-    // 管理员/卖家拒绝订单
+    // 卖家/管理员拒绝订单
     @OpLog(description = "拒绝订单", type = 2)
     @PostMapping("/reject/{id}")
     public Result<Void> reject(@PathVariable Long id,
                                @RequestBody(required = false) Map<String, String> body) {
+        checkSellerOrAdmin(id);
         tradeRecordService.reject(id, body == null ? null : body.get("remark"));
         return Result.success();
+    }
+
+    // 校验：管理员或订单卖家本人
+    private void checkSellerOrAdmin(Long id) {
+        TradeRecord record = tradeRecordService.getById(id);
+        if (record == null) {
+            throw new BusinessException("订单不存在");
+        }
+        Long loginId = StpUtil.getLoginIdAsLong();
+        if (StpUtil.hasRole("admin")) {
+            return;
+        }
+        if (record.getSellerId() == null || !record.getSellerId().equals(loginId)) {
+            throw new BusinessException("只有卖家本人或管理员可操作该订单");
+        }
     }
 
     // 买家取消订单（需本人或管理员）

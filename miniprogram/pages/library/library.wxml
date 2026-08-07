@@ -10,7 +10,7 @@
   </view>
   <view class="book-right">
     <view class="book-price">¥{{item.price}}</view>
-    <view class="book-sale">在售</view>
+    <view class="book-sale {{item.stock > 0 ? '' : 'book-soldout'}}">{{item.stock > 0 ? '在售' : '缺货'}}</view>
   </view>
 </view>
 

@@ -35,6 +35,21 @@
   margin-bottom: 20rpx;
 }
 
+.link-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.link-card .card-title {
+  margin-bottom: 0;
+}
+
+.link-arrow {
+  font-size: 44rpx;
+  color: #c0c4cc;
+}
+
 .empty {
   text-align: center;
   color: #c0c4cc;

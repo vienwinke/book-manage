@@ -32,6 +32,9 @@ public class BookInfo {
     @NotNull(message = "售价不能为空")
     private BigDecimal price;
 
+    /** 库存数量 */
+    private Integer stock;
+
     private Long sellerId;
 
     private String sellerName;

@@ -1,0 +1,13 @@
+<view class="login-page">
+  <view class="logo">📚</view>
+  <view class="app-name">注册账号</view>
+  <view class="app-desc">注册后即可扫码上架 / 购买图书</view>
+
+  <input class="input name-input" placeholder="账号（字母或数字）" value="{{username}}" bindinput="onUsernameInput"/>
+  <input class="input name-input" placeholder="昵称 / 姓名" value="{{realName}}" bindinput="onRealNameInput"/>
+  <input class="input name-input" placeholder="密码" password="{{true}}" value="{{password}}" bindinput="onPasswordInput"/>
+  <input class="input name-input" placeholder="确认密码" password="{{true}}" value="{{confirm}}" bindinput="onConfirmInput"/>
+
+  <button class="btn btn-primary login-btn" bindtap="doRegister" disabled="{{loading}}">{{loading ? '注册中...' : '注册'}}</button>
+  <view class="tip">已注册？返回登录</view>
+</view>

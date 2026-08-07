@@ -18,12 +18,14 @@ Page({
     this.setData({ keyword: e.detail.value }, () => this.render())
   },
 
-  render() {
-    const kw = this.data.keyword.trim().toLowerCase()
-    const list = store.onSaleList()
-      .filter(b => !kw || (b.title || '').toLowerCase().includes(kw) ||
-        (b.author || '').toLowerCase().includes(kw) || (b.seller || '').includes(kw) || b.isbn.includes(kw))
-    this.setData({ books: list })
+  async render() {
+    wx.showLoading({ title: '加载中...' })
+    try {
+      const list = await store.onSaleList(this.data.keyword)
+      this.setData({ books: list })
+    } finally {
+      wx.hideLoading()
+    }
   },
 
   openDetail(e) {

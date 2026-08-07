@@ -33,12 +33,11 @@ public class SaTokenConfigure implements WebMvcConfigurer {
                     .notMatch("/auth/login", "/auth/register", "/", "/test", "/error")
                     .check(r -> StpUtil.checkLogin());
 
-            // 管理员专属接口（图书/用户管理、订单确认成交/拒绝/删除）
-            SaRouter.match("/book/add", "/book/update", "/book/delete/**")
-                    .check(r -> StpUtil.checkRole("admin"));
+            // 系统管理接口（用户管理、订单删除）需 admin 角色
+            // 图书修改/删除、订单确认成交/拒绝 由 controller 内校验「卖家本人或管理员」
             SaRouter.match("/user/add", "/user/update", "/user/delete/**")
                     .check(r -> StpUtil.checkRole("admin"));
-            SaRouter.match("/order/confirm/**", "/order/reject/**", "/order/delete/**")
+            SaRouter.match("/order/delete/**")
                     .check(r -> StpUtil.checkRole("admin"));
         })).addPathPatterns("/**");
     }
