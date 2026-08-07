@@ -1,0 +1,17 @@
+<view class="search-bar">
+  <input class="search-input" placeholder="搜索书名 / 作者 / ISBN / 卖家" bindinput="onSearch" value="{{keyword}}"/>
+</view>
+
+<view class="card book-item" wx:for="{{books}}" wx:key="isbn" bindtap="openDetail" data-isbn="{{item.isbn}}">
+  <view class="book-main">
+    <view class="book-title">{{item.title}}</view>
+    <view class="book-meta">{{item.author}} · {{item.category}}</view>
+    <view class="book-isbn">卖家 {{item.seller}} · {{item.quality || '成色未知'}}</view>
+  </view>
+  <view class="book-right">
+    <view class="book-price">¥{{item.price}}</view>
+    <view class="book-sale">在售</view>
+  </view>
+</view>
+
+<view class="empty" wx:if="{{!books.length}}">暂无在售图书</view>

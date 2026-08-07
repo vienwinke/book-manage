@@ -1,0 +1,23 @@
+<view class="login-page">
+  <view class="logo">📚</view>
+  <view class="app-name">扫码识书 · 二手书交易</view>
+  <view class="app-desc">扫描 ISBN 自动识别书籍信息</view>
+
+  <view class="role-group">
+    <view class="role-card {{role === 'admin' ? 'active' : ''}}" data-role="admin" bindtap="selectRole">
+      <view class="role-icon">🛠️</view>
+      <view class="role-name">管理员</view>
+      <view class="role-desc">录入上架 · 订单管理</view>
+    </view>
+    <view class="role-card {{role === 'user' ? 'active' : ''}}" data-role="user" bindtap="selectRole">
+      <view class="role-icon">🛍️</view>
+      <view class="role-name">普通用户</view>
+      <view class="role-desc">买书 · 卖书 · 我的订单</view>
+    </view>
+  </view>
+
+  <input class="input name-input" placeholder="您的昵称（作为卖家/买家显示名，可留空）" value="{{name}}" bindinput="onNameInput"/>
+
+  <button class="btn btn-primary login-btn" bindtap="doLogin" disabled="{{!role}}">开始使用</button>
+  <view class="tip">纯前端演示版：数据保存在本机，扫码识别需联网</view>
+</view>

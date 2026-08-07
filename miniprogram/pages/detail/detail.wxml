@@ -1,0 +1,101 @@
+<!-- 已收录图书 -->
+<view class="card" wx:if="{{found}}">
+  <view class="book-head">
+    <view class="book-title">{{book.title}}</view>
+    <view class="tag {{book.status === 0 ? 'tag-status' : (book.status === 1 ? 'tag-sold' : 'tag-off')}}">{{book.statusText}}</view>
+  </view>
+  <image class="cover" wx:if="{{book.cover}}" src="{{book.cover}}" mode="aspectFit"/>
+  <view class="price-line">售价：<text class="price">¥{{book.price}}</text></view>
+  <view class="book-meta-line">作者：{{book.author}}</view>
+  <view class="book-meta-line">ISBN：{{book.isbn}}</view>
+  <view class="book-meta-line" wx:if="{{book.category}}">分类：{{book.category}}</view>
+  <view class="book-meta-line" wx:if="{{book.version}}">版次：{{book.version}}</view>
+  <view class="book-meta-line" wx:if="{{book.quality}}">成色：{{book.quality}}</view>
+  <view class="book-meta-line" wx:if="{{book.publisher}}">出版社：{{book.publisher}}</view>
+  <view class="book-meta-line" wx:if="{{book.publishedDate}}">出版时间：{{book.publishedDate}}</view>
+  <view class="book-meta-line">卖家：{{book.seller}}</view>
+  <view class="book-meta-line" wx:if="{{book.remark}}">备注：{{book.remark}}</view>
+
+  <!-- 管理操作（管理员 或 本书卖家） -->
+  <view class="actions" wx:if="{{canManage}}">
+    <!-- 编辑模式 -->
+    <block wx:if="{{editMode}}">
+      <view class="nf-title">修改图书信息</view>
+      <input class="input" placeholder="书名（必填）" value="{{editForm.title}}" data-field="title" bindinput="onEditInput"/>
+      <input class="input" placeholder="作者" value="{{editForm.author}}" data-field="author" bindinput="onEditInput"/>
+      <input class="input" placeholder="分类（如 计算机/文学）" value="{{editForm.category}}" data-field="category" bindinput="onEditInput"/>
+      <input class="input" placeholder="版次" value="{{editForm.version}}" data-field="version" bindinput="onEditInput"/>
+      <input class="input" placeholder="成色" value="{{editForm.quality}}" data-field="quality" bindinput="onEditInput"/>
+      <view class="count-row">
+        <text class="count-label">售价（元）</text>
+        <input class="input count-input" type="digit" placeholder="0" value="{{editForm.price}}" data-field="price" bindinput="onEditInput"/>
+      </view>
+      <input class="input" placeholder="备注（成色/有无笔记等，选填）" value="{{editForm.remark}}" data-field="remark" bindinput="onEditInput"/>
+      <view class="row-btns">
+        <button class="btn btn-success action-btn mini" bindtap="saveEdit">保存</button>
+        <button class="btn btn-plain action-btn mini" bindtap="cancelEdit">取消</button>
+      </view>
+    </block>
+
+    <!-- 常规操作 -->
+    <block wx:else>
+      <view class="order-row" wx:if="{{book.status === 0 && myOrder}}">
+        <text>订单待确认：{{myOrder.buyer}}</text>
+        <view class="row-btns">
+          <button class="btn btn-success action-btn mini" size="mini" data-id="{{myOrder.id}}" bindtap="confirmOrder">成交</button>
+          <button class="btn btn-danger action-btn mini" size="mini" data-id="{{myOrder.id}}" bindtap="rejectOrder">拒绝</button>
+        </view>
+      </view>
+      <block wx:if="{{book.status === 0}}">
+        <button class="btn btn-primary action-btn" bindtap="startEdit">修改信息</button>
+        <view class="row-btns">
+          <button class="btn btn-warning action-btn mini" bindtap="shelfOff">下架</button>
+          <button class="btn btn-danger action-btn mini" bindtap="removeBook">删除此书</button>
+        </view>
+      </block>
+      <block wx:else>
+        <button class="btn btn-success action-btn" bindtap="relist">重新上架</button>
+        <button class="btn btn-primary action-btn" bindtap="startEdit">修改信息</button>
+        <button class="btn btn-danger action-btn" bindtap="removeBook">删除此书</button>
+      </block>
+    </block>
+  </view>
+
+  <!-- 普通用户操作 -->
+  <view class="actions" wx:if="{{isUser}}">
+    <view class="order-row" wx:if="{{book.status === 0 && myOrder && book.seller !== owner}}">
+      <text>已下单待确认（{{myOrder.applyTime}}）</text>
+      <button class="btn btn-danger action-btn mini" size="mini" bindtap="cancelOrder">取消订单</button>
+    </view>
+    <button class="btn btn-primary action-btn" wx:if="{{book.status === 0 && !myOrder && book.seller !== owner}}" bindtap="buy">下单购买</button>
+    <view class="own-tip" wx:if="{{book.status === 0 && !myOrder && book.seller === owner}}">这是您自己发布的图书</view>
+    <view class="own-tip" wx:if="{{book.status !== 0}}">该书{{book.statusText}}</view>
+  </view>
+</view>
+
+<!-- 未收录 + 管理员：自动填充表单确认上架 -->
+<view class="card" wx:elif="{{isAdmin}}">
+  <view class="nf-title">库中暂无该 ISBN（{{isbn}}）</view>
+  <view class="nf-sub">已尝试云端自动识别，请确认信息后上架</view>
+  <view class="loading-tip" wx:if="{{loadingRemote}}">正在云端识别...</view>
+  <view class="nf-sub" wx:if="{{!loadingRemote && remoteMsg}}">{{remoteMsg}}</view>
+  <image class="cover" wx:if="{{form.cover}}" src="{{form.cover}}" mode="aspectFit"/>
+  <input class="input" placeholder="书名（必填）" value="{{form.title}}" data-field="title" bindinput="onFormInput"/>
+  <input class="input" placeholder="作者" value="{{form.author}}" data-field="author" bindinput="onFormInput"/>
+  <input class="input" placeholder="分类（如 计算机/文学）" value="{{form.category}}" data-field="category" bindinput="onFormInput"/>
+  <view class="count-row">
+    <text class="count-label">售价（元）</text>
+    <input class="input count-input" type="digit" placeholder="0" value="{{form.price}}" data-field="price" bindinput="onFormInput"/>
+  </view>
+  <input class="input" placeholder="备注（成色/有无笔记等，选填）" value="{{form.remark}}" data-field="remark" bindinput="onFormInput"/>
+  <button class="btn btn-success action-btn" bindtap="publish">确认上架</button>
+</view>
+
+<!-- 未收录 + 普通用户 -->
+<view class="card not-found" wx:else>
+  <view class="nf-title" wx:if="{{remoteInfo && remoteInfo.title}}">{{remoteInfo.title}}</view>
+  <view class="nf-sub" wx:if="{{remoteInfo && remoteInfo.author}}">作者：{{remoteInfo.author}}</view>
+  <view class="loading-tip" wx:if="{{loadingRemote}}">正在云端识别...</view>
+  <view class="nf-sub" wx:if="{{!loadingRemote && remoteMsg}}">{{remoteMsg}}</view>
+  <view class="nf-sub" wx:else-if="{{!loadingRemote}}">该书暂未上架，可关注后续</view>
+</view>

@@ -33,44 +33,45 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { Notebook, Tickets, Document, User, Memo, CircleCheck } from '@element-plus/icons-vue'
+import { Notebook, CircleCheck, Document, User, Memo, Sell } from '@element-plus/icons-vue'
 import { pageBooks } from '../api/book'
-import { pageBorrows } from '../api/borrow'
+import { pageOrders } from '../api/order'
 import { pageUsers } from '../api/user'
 import { pageLogs } from '../api/log'
 
-const bookTotal = ref(0)
-const availableTotal = ref(0)
-const pendingCount = ref(0)
-const borrowedCount = ref(0)
+const onSaleCount = ref(0)
+const soldCount = ref(0)
+const pendingOrderCount = ref(0)
+const doneOrderCount = ref(0)
 const userCount = ref(0)
 const logCount = ref(0)
 const recentLogs = ref([])
 
 const cards = computed(() => [
-  { label: '图书总数', value: bookTotal.value, icon: Notebook, bg: '#ecf5ff', color: '#409EFF' },
-  { label: '可借总数', value: availableTotal.value, icon: CircleCheck, bg: '#f0f9eb', color: '#67c23a' },
-  { label: '待审核', value: pendingCount.value, icon: Tickets, bg: '#fdf6ec', color: '#e6a23c' },
-  { label: '借出中', value: borrowedCount.value, icon: Document, bg: '#f4f4f5', color: '#909399' },
+  { label: '在售图书', value: onSaleCount.value, icon: Notebook, bg: '#ecf5ff', color: '#409EFF' },
+  { label: '已售图书', value: soldCount.value, icon: CircleCheck, bg: '#f0f9eb', color: '#67c23a' },
+  { label: '待确认订单', value: pendingOrderCount.value, icon: Document, bg: '#fdf6ec', color: '#e6a23c' },
+  { label: '已成交订单', value: doneOrderCount.value, icon: Sell, bg: '#f0f9eb', color: '#67c23a' },
   { label: '用户数', value: userCount.value, icon: User, bg: '#fef0f0', color: '#f56c6c' },
   { label: '日志数', value: logCount.value, icon: Memo, bg: '#f9f0ff', color: '#9c27b0' }
 ])
 
 onMounted(async () => {
-  const [books, users, logs, pendingBorrows, borrowedBorrows] = await Promise.all([
-    pageBooks({ pageNum: 1, pageSize: 100 }),
+  const [onSale, sold, users, logs, pendingOrders, doneOrders] = await Promise.all([
+    pageBooks({ pageNum: 1, pageSize: 1, bookStatus: 0 }),
+    pageBooks({ pageNum: 1, pageSize: 1, bookStatus: 1 }),
     pageUsers({ pageNum: 1, pageSize: 1 }),
     pageLogs({ pageNum: 1, pageSize: 5 }),
-    pageBorrows({ pageNum: 1, pageSize: 1, status: 0 }),
-    pageBorrows({ pageNum: 1, pageSize: 1, status: 1 })
+    pageOrders({ pageNum: 1, pageSize: 1, status: 0 }),
+    pageOrders({ pageNum: 1, pageSize: 1, status: 1 })
   ])
-  bookTotal.value = books.total
-  availableTotal.value = books.records.reduce((s, b) => s + (b.availableNum || 0), 0)
+  onSaleCount.value = onSale.total
+  soldCount.value = sold.total
   userCount.value = users.total
   logCount.value = logs.total
   recentLogs.value = logs.records
-  pendingCount.value = pendingBorrows.total
-  borrowedCount.value = borrowedBorrows.total
+  pendingOrderCount.value = pendingOrders.total
+  doneOrderCount.value = doneOrders.total
 })
 </script>
 

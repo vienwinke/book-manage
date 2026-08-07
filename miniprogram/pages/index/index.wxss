@@ -1,0 +1,135 @@
+.scan-hero {
+  padding: 40rpx 24rpx 24rpx;
+}
+
+.scan-btn {
+  background: linear-gradient(135deg, #409eff, #66b1ff);
+  border-radius: 24rpx;
+  padding: 60rpx 0;
+  text-align: center;
+  color: #fff;
+}
+
+.scan-circle {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.scan-icon {
+  font-size: 72rpx;
+}
+
+.scan-text {
+  font-size: 34rpx;
+  font-weight: 600;
+  margin-top: 24rpx;
+}
+
+.scan-sub {
+  font-size: 24rpx;
+  opacity: 0.8;
+  margin-top: 8rpx;
+}
+
+.manual-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.manual-title {
+  font-size: 26rpx;
+  color: #909399;
+  margin-bottom: 16rpx;
+}
+
+.manual-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.manual-input {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.stats-row {
+  display: flex;
+  justify-content: space-around;
+  padding: 10rpx 0;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat-num {
+  font-size: 48rpx;
+  font-weight: 700;
+  color: #409eff;
+}
+
+.stat-label {
+  font-size: 24rpx;
+  color: #909399;
+  margin-top: 4rpx;
+}
+
+.card-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-bottom: 20rpx;
+}
+
+.card-sub {
+  font-size: 22rpx;
+  color: #909399;
+  font-weight: 400;
+  margin-left: 8rpx;
+}
+
+.empty {
+  text-align: center;
+  color: #c0c4cc;
+  font-size: 26rpx;
+  padding: 30rpx 0;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #f0f2f5;
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.h-title {
+  font-size: 28rpx;
+  color: #303133;
+}
+
+.h-isbn {
+  font-size: 22rpx;
+  color: #909399;
+  margin-top: 6rpx;
+}
+
+.tag-success {
+  background: #f0f9eb;
+  color: #67c23a;
+}
+
+.tag-plain {
+  background: #f4f4f5;
+  color: #909399;
+}

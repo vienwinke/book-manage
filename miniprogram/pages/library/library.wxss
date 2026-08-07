@@ -1,0 +1,68 @@
+.search-bar {
+  padding: 20rpx 24rpx 0;
+}
+
+.search-input {
+  background: #fff;
+  border-radius: 40rpx;
+  padding: 16rpx 28rpx;
+  font-size: 28rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+
+.book-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.book-main {
+  flex: 1;
+}
+
+.book-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #303133;
+}
+
+.book-meta {
+  font-size: 24rpx;
+  color: #909399;
+  margin-top: 8rpx;
+}
+
+.book-isbn {
+  font-size: 22rpx;
+  color: #c0c4cc;
+  margin-top: 8rpx;
+}
+
+.book-right {
+  text-align: right;
+}
+
+.book-price {
+  color: #f56c6c;
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.book-sale {
+  color: #67c23a;
+  font-size: 22rpx;
+  margin-top: 6rpx;
+}
+
+.book-total {
+  color: #909399;
+  font-size: 22rpx;
+  margin-top: 6rpx;
+}
+
+.empty {
+  text-align: center;
+  color: #c0c4cc;
+  padding: 80rpx 0;
+  font-size: 26rpx;
+}

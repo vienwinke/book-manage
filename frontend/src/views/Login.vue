@@ -13,7 +13,7 @@
         <div class="logo">
           <el-icon :size="34" color="#fff"><Reading /></el-icon>
         </div>
-        <h2>二手图书借阅管理系统</h2>
+        <h2>二手书买卖管理系统</h2>
         <p>BOOK MANAGE SYSTEM</p>
       </div>
 

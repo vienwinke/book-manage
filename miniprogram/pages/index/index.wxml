@@ -1,0 +1,46 @@
+<view class="scan-hero">
+  <view class="scan-btn" bindtap="scan">
+    <view class="scan-circle">
+      <view class="scan-icon">📷</view>
+    </view>
+    <view class="scan-text">扫描 ISBN 条码</view>
+    <view class="scan-sub">将书本背面条码对准摄像头</view>
+  </view>
+</view>
+
+<view class="card manual-card">
+  <view class="manual-title">识别失败？手动输入 ISBN</view>
+  <view class="manual-row">
+    <input class="input manual-input" placeholder="例如 9787536692930" bindinput="onIsbnInput" value="{{isbn}}"/>
+    <button class="btn btn-primary manual-go" size="mini" bindtap="lookupByInput">查询</button>
+  </view>
+</view>
+
+<view class="card">
+  <view class="stats-row">
+    <view class="stat">
+      <view class="stat-num">{{stats.today}}</view>
+      <view class="stat-label">今日扫码</view>
+    </view>
+    <view class="stat">
+      <view class="stat-num">{{stats.total}}</view>
+      <view class="stat-label">累计扫码</view>
+    </view>
+    <view class="stat">
+      <view class="stat-num">{{stats.shelf}}</view>
+      <view class="stat-label">已上架</view>
+    </view>
+  </view>
+</view>
+
+<view class="card">
+  <view class="card-title">最近扫码 <text class="card-sub" wx:if="{{isAdmin}}">（管理员模式）</text></view>
+  <view class="empty" wx:if="{{!history.length}}">暂无扫描记录</view>
+  <view class="history-item" wx:for="{{history}}" wx:key="time" bindtap="openDetail" data-isbn="{{item.isbn}}">
+    <view class="h-info">
+      <view class="h-title">{{item.title}}</view>
+      <view class="h-isbn">{{item.isbn}} · {{item.timeText}}</view>
+    </view>
+    <view class="tag {{item.shelf ? 'tag-success' : 'tag-plain'}}">{{item.shelf ? '已上架' : '仅识别'}}</view>
+  </view>
+</view>

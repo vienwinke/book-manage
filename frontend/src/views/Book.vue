@@ -8,12 +8,13 @@
         <el-option v-for="c in categories" :key="c" :label="c" :value="c" />
       </el-select>
       <el-select v-model="query.bookStatus" placeholder="状态" clearable style="width: 110px">
-        <el-option label="上架" :value="0" />
-        <el-option label="下架" :value="1" />
+        <el-option label="在售" :value="0" />
+        <el-option label="已售" :value="1" />
+        <el-option label="下架" :value="2" />
       </el-select>
       <el-button type="primary" @click="loadData(1)">查询</el-button>
       <el-button @click="resetQuery">重置</el-button>
-      <el-button type="success" @click="openForm()">新增图书</el-button>
+      <el-button type="success" @click="openForm()">上架图书</el-button>
     </div>
 
     <el-table :data="list" v-loading="loading" stripe>
@@ -24,16 +25,19 @@
       <el-table-column prop="category" label="分类" width="90" />
       <el-table-column prop="version" label="版次" width="80" />
       <el-table-column prop="quality" label="成色" width="90" />
-      <el-table-column prop="totalNum" label="总数" width="70" align="center" />
-      <el-table-column prop="availableNum" label="可借" width="70" align="center" />
+      <el-table-column label="售价" width="80" align="center">
+        <template #default="{ row }">
+          <span style="color: #f56c6c; font-weight: 600">¥{{ row.price }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="sellerName" label="卖家" width="100" />
       <el-table-column label="状态" width="80" align="center">
         <template #default="{ row }">
-          <el-tag :type="row.bookStatus === 0 ? 'success' : 'info'">
-            {{ row.bookStatus === 0 ? '上架' : '下架' }}
+          <el-tag :type="row.bookStatus === 0 ? 'success' : (row.bookStatus === 1 ? 'danger' : 'info')">
+            {{ row.bookStatus === 0 ? '在售' : (row.bookStatus === 1 ? '已售' : '下架') }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="source" label="来源" width="90" />
       <el-table-column label="操作" width="150" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="openForm(row)">编辑</el-button>
@@ -51,8 +55,8 @@
       @current-change="loadData"
     />
 
-    <!-- 新增/编辑弹窗 -->
-    <el-dialog v-model="dialogVisible" :title="form.id ? '编辑图书' : '新增图书'" width="560px">
+    <!-- 上架/编辑弹窗 -->
+    <el-dialog v-model="dialogVisible" :title="form.id ? '编辑图书' : '上架图书'" width="560px">
       <el-form ref="formRef" :model="form" :rules="formRules" label-width="90px">
         <el-row :gutter="12">
           <el-col :span="12">
@@ -86,26 +90,17 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="总数量" prop="totalNum">
-              <el-input-number v-model="form.totalNum" :min="0" style="width: 100%" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="可借数量" prop="availableNum">
-              <el-input-number v-model="form.availableNum" :min="0" style="width: 100%" />
+            <el-form-item label="售价" prop="price">
+              <el-input-number v-model="form.price" :min="0" :precision="2" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="状态">
               <el-radio-group v-model="form.bookStatus">
-                <el-radio :value="0">上架</el-radio>
-                <el-radio :value="1">下架</el-radio>
+                <el-radio :value="0">在售</el-radio>
+                <el-radio :value="1">已售</el-radio>
+                <el-radio :value="2">下架</el-radio>
               </el-radio-group>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="来源">
-              <el-input v-model="form.source" />
             </el-form-item>
           </el-col>
           <el-col :span="24">
@@ -140,13 +135,13 @@ const saving = ref(false)
 const formRef = ref(null)
 const emptyForm = () => ({
   id: null, bookName: '', author: '', isbn: '', category: '', version: '',
-  quality: '', totalNum: 0, availableNum: 0, bookStatus: 0, source: '', remark: ''
+  quality: '', price: 0, bookStatus: 0, remark: ''
 })
 const form = reactive(emptyForm())
 
 const formRules = {
   bookName: [{ required: true, message: '请输入书名', trigger: 'blur' }],
-  totalNum: [{ required: true, message: '请输入总数量', trigger: 'change' }]
+  price: [{ required: true, message: '请输入售价', trigger: 'change' }]
 }
 
 const loadData = async pageNum => {
@@ -168,9 +163,6 @@ const resetQuery = () => {
 
 const openForm = row => {
   Object.assign(form, emptyForm(), row || {})
-  if (form.id) {
-    form._originTotalNum = form.totalNum
-  }
   dialogVisible.value = true
 }
 
@@ -180,18 +172,11 @@ const handleSave = () => {
     saving.value = true
     try {
       if (form.id) {
-        const diff = form.totalNum - (form._originTotalNum || 0)
-        if (diff !== 0) {
-          form.availableNum = Math.max(0, form.availableNum + diff)
-        }
         await updateBook({ ...form })
         ElMessage.success('修改成功')
       } else {
-        if (form.availableNum === 0 && form.totalNum > 0) {
-          form.availableNum = form.totalNum
-        }
         await addBook({ ...form })
-        ElMessage.success('新增成功')
+        ElMessage.success('上架成功')
       }
       dialogVisible.value = false
       loadData()

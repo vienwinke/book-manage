@@ -41,16 +41,16 @@ const routes = [
         meta: { title: '图书浏览', role: 'student' }
       },
       {
-        path: 'borrow',
-        name: 'Borrow',
-        component: () => import('../views/Borrow.vue'),
-        meta: { title: '借阅管理', role: 'admin' }
+        path: 'order',
+        name: 'Order',
+        component: () => import('../views/Order.vue'),
+        meta: { title: '订单管理', role: 'admin' }
       },
       {
-        path: 'my-borrow',
-        name: 'MyBorrow',
-        component: () => import('../views/MyBorrow.vue'),
-        meta: { title: '我的借阅', role: 'student' }
+        path: 'my-order',
+        name: 'MyOrder',
+        component: () => import('../views/MyOrder.vue'),
+        meta: { title: '我的订单', role: 'student' }
       },
       {
         path: 'user',

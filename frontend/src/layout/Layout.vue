@@ -70,8 +70,8 @@ const allMenus = [
   { path: '/dashboard', title: '首页看板', icon: DataLine, role: 'admin' },
   { path: '/book', title: '图书管理', icon: Notebook, role: 'admin' },
   { path: '/library', title: '图书浏览', icon: Collection, role: 'student' },
-  { path: '/borrow', title: '借阅管理', icon: Tickets, role: 'admin' },
-  { path: '/my-borrow', title: '我的借阅', icon: Document, role: 'student' },
+  { path: '/order', title: '订单管理', icon: Tickets, role: 'admin' },
+  { path: '/my-order', title: '我的订单', icon: Document, role: 'student' },
   { path: '/user', title: '用户管理', icon: User, role: 'admin' },
   { path: '/log', title: '日志管理', icon: Memo, role: 'admin' }
 ]

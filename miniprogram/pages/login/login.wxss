@@ -1,0 +1,84 @@
+.login-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #409eff 0%, #eef5ff 40%, #f5f7fa 100%);
+  padding: 120rpx 60rpx;
+  box-sizing: border-box;
+}
+
+.logo {
+  font-size: 120rpx;
+  text-align: center;
+}
+
+.app-name {
+  font-size: 56rpx;
+  font-weight: 700;
+  color: #303133;
+  text-align: center;
+  margin-top: 16rpx;
+}
+
+.app-desc {
+  font-size: 26rpx;
+  color: #909399;
+  text-align: center;
+  margin-top: 12rpx;
+}
+
+.role-group {
+  display: flex;
+  gap: 24rpx;
+  margin-top: 80rpx;
+}
+
+.role-card {
+  flex: 1;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 40rpx 20rpx;
+  text-align: center;
+  border: 4rpx solid transparent;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
+}
+
+.role-card.active {
+  border-color: #409eff;
+  background: #ecf5ff;
+}
+
+.role-icon {
+  font-size: 64rpx;
+}
+
+.role-name {
+  font-size: 34rpx;
+  font-weight: 600;
+  margin-top: 12rpx;
+  color: #303133;
+}
+
+.role-desc {
+  font-size: 22rpx;
+  color: #909399;
+  margin-top: 8rpx;
+}
+
+.login-btn {
+  margin-top: 40rpx;
+}
+
+.login-btn[disabled] {
+  opacity: 0.5;
+}
+
+.name-input {
+  margin-top: 40rpx;
+  background: #fff;
+}
+
+.tip {
+  text-align: center;
+  font-size: 22rpx;
+  color: #c0c4cc;
+  margin-top: 40rpx;
+}

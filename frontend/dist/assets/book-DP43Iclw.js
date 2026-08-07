@@ -1,0 +1,1 @@
+import{r as e}from"./request--QKktAlu.js";const a=o=>e.get("/book/page",{params:o}),s=o=>e.post("/book/add",o),d=o=>e.put("/book/update",o),p=o=>e.delete(`/book/delete/${o}`);export{s as a,p as d,a as p,d as u};

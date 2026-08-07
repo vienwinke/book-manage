@@ -10,7 +10,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
  * Sa-Token 拦截器配置：除登录/注册等公开接口外，其余接口需登录
- * 管理类接口需 admin 角色
+ * 管理类接口（图书/用户管理、订单确认成交/拒绝/删除）需 admin 角色
  */
 @Configuration
 public class SaTokenConfigure implements WebMvcConfigurer {
@@ -33,12 +33,12 @@ public class SaTokenConfigure implements WebMvcConfigurer {
                     .notMatch("/auth/login", "/auth/register", "/", "/test", "/error")
                     .check(r -> StpUtil.checkLogin());
 
-            // 管理员专属接口（图书/用户管理）
+            // 管理员专属接口（图书/用户管理、订单确认成交/拒绝/删除）
             SaRouter.match("/book/add", "/book/update", "/book/delete/**")
                     .check(r -> StpUtil.checkRole("admin"));
             SaRouter.match("/user/add", "/user/update", "/user/delete/**")
                     .check(r -> StpUtil.checkRole("admin"));
-            SaRouter.match("/borrow/approve/**", "/borrow/reject/**", "/borrow/return/**", "/borrow/delete/**")
+            SaRouter.match("/order/confirm/**", "/order/reject/**", "/order/delete/**")
                     .check(r -> StpUtil.checkRole("admin"));
         })).addPathPatterns("/**");
     }

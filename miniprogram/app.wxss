@@ -1,0 +1,71 @@
+page {
+  background: #f5f7fa;
+  font-size: 28rpx;
+  color: #303133;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+}
+
+.card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 28rpx;
+  margin: 20rpx 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
+}
+
+.btn {
+  border-radius: 14rpx;
+  font-size: 30rpx;
+  line-height: 1;
+}
+
+.btn::after {
+  border: none;
+}
+
+.btn-primary {
+  background: #409eff;
+  color: #fff;
+}
+
+.btn-success {
+  background: #67c23a;
+  color: #fff;
+}
+
+.btn-danger {
+  background: #f56c6c;
+  color: #fff;
+}
+
+.btn-plain {
+  background: #fff;
+  color: #409eff;
+  border: 2rpx solid #409eff;
+}
+
+.btn-disabled {
+  background: #c0c4cc !important;
+  color: #fff !important;
+}
+
+.input {
+  background: #f5f7fa;
+  border-radius: 12rpx;
+  padding: 18rpx 20rpx;
+  font-size: 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.label {
+  font-size: 24rpx;
+  color: #909399;
+  margin: 8rpx 0 12rpx;
+}
+
+.tag {
+  display: inline-block;
+  padding: 4rpx 16rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+}

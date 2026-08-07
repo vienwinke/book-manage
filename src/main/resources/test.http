@@ -1,5 +1,26 @@
-### 日志分页接口
-GET http://localhost:8080/log/page?pageNum=1&pageSize=10
+### 登录获取 token
+POST http://localhost:8080/auth/login
+Content-Type: application/json
 
-### 根据ID查询单条日志
-GET http://localhost:8080/log/1
+{"username":"admin","password":"123456"}
+
+### 图书分页（在售）
+GET http://localhost:8080/book/page?pageNum=1&pageSize=10&bookStatus=0
+
+### 订单分页
+GET http://localhost:8080/order/page?pageNum=1&pageSize=10
+
+### 下单购买
+POST http://localhost:8080/order/apply
+Content-Type: application/json
+
+{"bookId": 1}
+
+### 确认成交
+POST http://localhost:8080/order/confirm/1
+Content-Type: application/json
+
+{"remark":"同意成交"}
+
+### 日志分页
+GET http://localhost:8080/log/page?pageNum=1&pageSize=10

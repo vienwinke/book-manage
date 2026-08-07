@@ -3,9 +3,10 @@ package com.book.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -28,15 +29,15 @@ public class BookInfo {
 
     private String quality;
 
-    @Min(value = 0, message = "总数量不能小于0")
-    private Integer totalNum;
+    @NotNull(message = "售价不能为空")
+    private BigDecimal price;
 
-    @Min(value = 0, message = "可借数量不能小于0")
-    private Integer availableNum;
+    private Long sellerId;
 
+    private String sellerName;
+
+    /** 状态 0-在售 1-已售 2-下架 */
     private Integer bookStatus;
-
-    private String source;
 
     private String remark;
 

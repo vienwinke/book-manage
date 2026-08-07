@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>扫码添加图书</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; min-height: 100vh; }
+    .header { background: #409EFF; color: #fff; padding: 16px; text-align: center; font-size: 18px; font-weight: 600; position: sticky; top: 0; z-index: 10; }
+    .header .user { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+    .container { padding: 16px; max-width: 500px; margin: 0 auto; }
+    .scan-area { background: #fff; border-radius: 12px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    #reader { width: 100%; min-height: 300px; }
+    .scan-tip { text-align: center; padding: 12px; color: #909399; font-size: 13px; }
+    .upload-btn { display: inline-block; margin-top: 8px; padding: 8px 16px; background: #67c23a; color: #fff; border-radius: 6px; font-size: 13px; cursor: pointer; border: none; -webkit-appearance: none; }
+    .upload-btn:active { opacity: 0.7; }
+    .or-divider { text-align: center; color: #c0c4cc; font-size: 12px; margin: 8px 0; }
+    .book-info { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; }
+    .book-info.show { display: block; }
+    .book-info h3 { font-size: 16px; color: #303133; margin-bottom: 8px; }
+    .book-info p { font-size: 14px; color: #606266; margin-bottom: 4px; }
+    .book-info .cover { width: 80px; height: 110px; object-fit: cover; border-radius: 4px; float: right; margin-left: 12px; background: #f0f0f0; }
+    .btn { display: block; width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: all 0.2s; -webkit-appearance: none; }
+    .btn-primary { background: #409EFF; color: #fff; margin-bottom: 8px; }
+    .btn-success { background: #67c23a; color: #fff; margin-bottom: 8px; }
+    .btn-danger { background: #f56c6c; color: #fff; }
+    .btn:active { opacity: 0.7; }
+    .btn:disabled { background: #c0c4cc; }
+    .history { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .history h4 { font-size: 14px; color: #303133; margin-bottom: 12px; }
+    .history-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; color: #606266; }
+    .history-item:last-child { border-bottom: none; }
+    .history-item .isbn { color: #909399; font-size: 12px; }
+    .stats { display: flex; justify-content: space-around; background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .stats .stat { text-align: center; }
+    .stats .stat-num { font-size: 24px; font-weight: 700; color: #409EFF; }
+    .stats .stat-label { font-size: 12px; color: #909399; margin-top: 4px; }
+    .login-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+    .login-box { background: #fff; border-radius: 12px; padding: 24px; width: 85%; max-width: 320px; }
+    .login-box h3 { text-align: center; margin-bottom: 16px; color: #303133; }
+    .login-box input { width: 100%; padding: 12px; border: 1px solid #dcdfe6; border-radius: 6px; margin-bottom: 12px; font-size: 16px; -webkit-appearance: none; }
+    .login-box input:focus { outline: none; border-color: #409EFF; }
+    .empty { text-align: center; color: #c0c4cc; padding: 20px; font-size: 13px; }
+    .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: #fff; padding: 12px 24px; border-radius: 8px; font-size: 14px; z-index: 200; display: none; max-width: 80%; text-align: center; }
+    .loading { text-align: center; padding: 40px 20px; color: #909399; }
+    .logout { float: right; font-size: 12px; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div class="login-mask" id="loginMask">
+    <div class="login-box">
+      <h3>📚 扫码添加图书</h3>
+      <input type="text" id="username" placeholder="账号" value="admin" autocomplete="off">
+      <input type="password" id="password" placeholder="密码" value="123456">
+      <button class="btn btn-primary" id="loginBtn" onclick="doLogin()">登 录</button>
+    </div>
+  </div>
+
+  <div id="app" style="display:none">
+    <div class="header">
+      📷 扫码添加图书
+      <span class="logout" id="logoutBtn">退出</span>
+      <div class="user" id="userInfo"></div>
+    </div>
+    <div class="container">
+      <div class="stats">
+        <div class="stat"><div class="stat-num" id="todayCount">0</div><div class="stat-label">今日扫码</div></div>
+        <div class="stat"><div class="stat-num" id="totalCount">0</div><div class="stat-label">累计扫码</div></div>
+        <div class="stat"><div class="stat-num" id="addedCount">0</div><div class="stat-label">已入库</div></div>
+      </div>
+      <div class="scan-area">
+        <div id="reader"></div>
+        <div class="scan-tip">
+          📷 将 ISBN 条码对准扫描框<br>
+          <span class="or-divider">— 或 —</span><br>
+          <label class="upload-btn" id="manualBtn">✏️ 手动输入</label>
+          <label class="upload-btn" for="fileInput" style="background:#909399">📷 拍照识别</label>
+          <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
+        </div>
+      </div>
+
+      <!-- 手动输入表单 -->
+      <div class="book-info" id="manualForm">
+        <h3>✏️ 手动录入</h3>
+        <div style="margin-top:12px">
+          <input id="mIsbn" placeholder="ISBN" style="width:100%;padding:10px;border:1px solid #dcdfe6;border-radius:6px;margin-bottom:8px;font-size:14px">
+          <input id="mTitle" placeholder="书名" style="width:100%;padding:10px;border:1px solid #dcdfe6;border-radius:6px;margin-bottom:8px;font-size:14px">
+          <input id="mAuthor" placeholder="作者（选填）" style="width:100%;padding:10px;border:1px solid #dcdfe6;border-radius:6px;margin-bottom:8px;font-size:14px">
+          <button class="btn btn-success" id="manualAddBtn">确认添加到库</button>
+          <button class="btn btn-danger" id="manualCancelBtn">取消</button>
+        </div>
+      </div>
+      <div class="book-info" id="bookInfo">
+        <img class="cover" id="bookCover" src="" alt="封面">
+        <h3 id="bookTitle"></h3>
+        <p>作者：<span id="bookAuthor"></span></p>
+        <p>ISBN：<span id="bookIsbn"></span></p>
+        <p>出版日期：<span id="bookDate"></span></p>
+        <div style="clear:both;margin-top:12px;">
+          <button class="btn btn-success" id="confirmBtn">确认添加到库</button>
+          <button class="btn btn-danger" id="cancelBtn">取消</button>
+        </div>
+      </div>
+      <div class="history">
+        <h4>扫码记录</h4>
+        <div id="historyList"><div class="empty">暂无记录</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ========== 配置 ==========
+    const API_BASE = '/api';
+
+    // ========== 状态 ==========
+    let html5Qrcode = null;
+    let currentBook = null;
+    let scanHistory = [];
+    let token = '';
+    let currentUser = null;
+
+    // ========== 初始化 ==========
+    function init() {
+      token = localStorage.getItem('scan_token') || '';
+      try {
+        currentUser = JSON.parse(localStorage.getItem('scan_user') || 'null');
+      } catch(e) {
+        currentUser = null;
+      }
+
+      if (token && currentUser && currentUser.id) {
+        showMain();
+      } else {
+        showLogin();
+      }
+
+      // 事件绑定
+      document.getElementById('loginBtn').addEventListener('click', doLogin);
+      document.getElementById('confirmBtn').addEventListener('click', confirmAdd);
+      document.getElementById('cancelBtn').addEventListener('click', cancelAdd);
+      document.getElementById('logoutBtn').addEventListener('click', doLogout);
+
+      // 回车登录
+      document.getElementById('password').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') doLogin();
+      });
+
+      // 图片上传识别
+      document.getElementById('fileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) scanImage(file);
+      });
+
+      // 手动输入
+      document.getElementById('manualBtn').addEventListener('click', function() {
+        document.getElementById('manualForm').classList.toggle('show');
+      });
+      document.getElementById('manualCancelBtn').addEventListener('click', function() {
+        document.getElementById('manualForm').classList.remove('show');
+      });
+      document.getElementById('manualAddBtn').addEventListener('click', manualAdd);
+    });
+
+    // 手动添加
+    function manualAdd() {
+      var isbn = document.getElementById('mIsbn').value.trim();
+      var title = document.getElementById('mTitle').value.trim();
+      var author = document.getElementById('mAuthor').value.trim();
+      if (!isbn || !title) return showToast('请填写 ISBN 和书名');
+
+      currentBook = { isbn: isbn, title: title, author: author || '未知', date: '', cover: '' };
+      confirmAdd();
+    }
+
+    // 图片识别条码
+    function scanImage(file) {
+      showToast('正在识别...');
+      try {
+        var html5Qr = new Html5Qrcode('reader');
+        html5Qr.scanFile(file, false).then(function(result) {
+          if (result) {
+            lookupBook(result.trim());
+          } else {
+            showToast('未能识别条码，请重试');
+          }
+        }).catch(function(e) {
+          showToast('识别失败: ' + e.message);
+        });
+      } catch (e) {
+        showToast('识别失败: ' + e.message);
+      }
+    }
+
+    // ========== 登录 ==========
+    function showLogin() {
+      document.getElementById('loginMask').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+    }
+
+    function showMain() {
+      document.getElementById('loginMask').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('userInfo').textContent =
+        (currentUser.realName || currentUser.username) + ' (' + (currentUser.userType === 1 ? '管理员' : '用户') + ')';
+      loadHistory();
+      updateStats();
+      startScanner();
+    }
+
+    function doLogin() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      if (!username || !password) return showToast('请输入账号密码');
+
+      showToast('正在登录...');
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', API_BASE + '/auth/login', true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            try {
+              var data = JSON.parse(xhr.responseText);
+              if (data.code === 200) {
+                token = data.data.token;
+                currentUser = data.data.user;
+                localStorage.setItem('scan_token', token);
+                localStorage.setItem('scan_user', JSON.stringify(currentUser));
+                showToast('登录成功');
+                setTimeout(showMain, 300);
+              } else {
+                showToast(data.msg || '登录失败');
+              }
+            } catch(e) {
+              showToast('解析响应失败');
+            }
+          } else {
+            showToast('连接失败: HTTP ' + xhr.status);
+          }
+        }
+      };
+      xhr.onerror = function() {
+        showToast('网络错误，请检查网络连接');
+      };
+      xhr.send(JSON.stringify({ username: username, password: password }));
+    }
+
+    function doLogout() {
+      if (html5Qrcode) html5Qrcode.stop().catch(() => {});
+      localStorage.removeItem('scan_token');
+      localStorage.removeItem('scan_user');
+      token = '';
+      currentUser = null;
+      showLogin();
+    }
+
+    // ========== 扫码 ==========
+    function startScanner() {
+      html5Qrcode = new Html5Qrcode('reader');
+      const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+      Html5Qrcode.getCameras().then(cameras => {
+        if (cameras && cameras.length) {
+          const cameraId = cameras[cameras.length - 1].id;
+          html5Qrcode.start(cameraId, config, onScanSuccess, onScanFailure);
+        }
+      }).catch(err => {
+        document.getElementById('reader').innerHTML = '<div class="loading">无法访问摄像头<br><small>' + err + '</small></div>';
+      });
+    }
+
+    async function onScanSuccess(decodedText) {
+      if (!decodedText || decodedText.length < 10) return;
+      html5Qrcode.pause();
+      await lookupBook(decodedText.trim());
+    }
+
+    function onScanFailure() {}
+
+    // ========== 查询图书 ==========
+    function lookupBook(isbn) {
+      showToast('已识别 ISBN');
+      currentBook = { isbn: isbn, title: '', author: '', date: '', cover: '' };
+      document.getElementById('bookTitle').textContent = 'ISBN: ' + isbn;
+      document.getElementById('bookAuthor').textContent = '请手动填写书名';
+      document.getElementById('bookIsbn').textContent = isbn;
+      document.getElementById('bookDate').textContent = '';
+      document.getElementById('bookCover').src = '';
+      document.getElementById('bookInfo').classList.add('show');
+    }
+
+    function displayBook() {
+      document.getElementById('bookTitle').textContent = currentBook.title;
+      document.getElementById('bookAuthor').textContent = currentBook.author;
+      document.getElementById('bookIsbn').textContent = currentBook.isbn;
+      document.getElementById('bookDate').textContent = currentBook.date;
+      document.getElementById('bookCover').src = currentBook.cover || '';
+      document.getElementById('bookInfo').classList.add('show');
+    }
+
+    // ========== 确认添加 ==========
+    function confirmAdd() {
+      if (!currentBook) return;
+      var title = prompt('请输入书名：', currentBook.title || '');
+      if (!title) return showToast('已取消');
+      currentBook.title = title;
+      if (!currentBook.author) currentBook.author = prompt('请输入作者（可留空）：', '') || '未知';
+
+      showToast('正在添加...');
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', API_BASE + '/book/add', true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('satoken', token);
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            try {
+              var data = JSON.parse(xhr.responseText);
+              if (data.code === 200) {
+                showToast('添加成功！');
+                addToHistory(currentBook.isbn, currentBook.title, true);
+                cancelAdd();
+              } else {
+                showToast(data.msg || '添加失败');
+              }
+            } catch(e) {
+              showToast('解析响应失败');
+            }
+          } else {
+            showToast('添加失败: HTTP ' + xhr.status);
+          }
+        }
+      };
+      xhr.onerror = function() {
+        showToast('网络错误');
+      };
+      xhr.send(JSON.stringify({
+        bookName: currentBook.title,
+        author: currentBook.author,
+        isbn: currentBook.isbn,
+        totalNum: 1,
+        availableNum: 1,
+        bookStatus: 0,
+        source: '扫码录入'
+      }));
+    }
+
+    function cancelAdd() {
+      currentBook = null;
+      document.getElementById('bookInfo').classList.remove('show');
+      if (html5Qrcode) html5Qrcode.resume();
+    }
+
+    // ========== 历史记录 ==========
+    function addToHistory(isbn, title, added) {
+      const today = new Date().toISOString().split('T')[0];
+      scanHistory.unshift({ isbn, title, added, time: today });
+      scanHistory = scanHistory.slice(0, 50);
+      localStorage.setItem('scan_history', JSON.stringify(scanHistory));
+      loadHistory();
+      updateStats();
+    }
+
+    function loadHistory() {
+      const saved = localStorage.getItem('scan_history');
+      if (saved) {
+        try { scanHistory = JSON.parse(saved); } catch(e) {}
+      }
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const el = document.getElementById('historyList');
+      if (!scanHistory || scanHistory.length === 0) {
+        el.innerHTML = '<div class="empty">暂无记录</div>';
+        return;
+      }
+      el.innerHTML = scanHistory.slice(0, 10).map(function(h) {
+        return '<div class="history-item"><span>' + (h.title || h.isbn) + '</span><span class="isbn">' + h.isbn + (h.added ? ' ✅' : ' ❌') + '</span></div>';
+      }).join('');
+    }
+
+    function updateStats() {
+      const today = new Date().toISOString().split('T')[0];
+      let todayScans = 0, addedScans = 0;
+      scanHistory.forEach(function(h) {
+        if (h.time === today) todayScans++;
+        if (h.added) addedScans++;
+      });
+      document.getElementById('todayCount').textContent = todayScans;
+      document.getElementById('totalCount').textContent = scanHistory.length;
+      document.getElementById('addedCount').textContent = addedScans;
+    }
+
+    // ========== Toast ==========
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.style.display = 'block';
+      clearTimeout(el._timer);
+      el._timer = setTimeout(function() { el.style.display = 'none'; }, 2000);
+    }
+
+    // ========== 启动 ==========
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>

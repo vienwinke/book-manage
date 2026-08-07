@@ -1,0 +1,73 @@
+<view class="card profile">
+  <view class="avatar">{{isAdmin ? '🛠️' : '🛍️'}}</view>
+  <view class="profile-info">
+    <view class="profile-role">{{isAdmin ? '管理员' : '普通用户'}}</view>
+    <view class="profile-desc">{{isAdmin ? '录入上架 · 订单管理' : owner + '（买书 · 卖书）'}}</view>
+  </view>
+  <view class="btn btn-plain logout-btn" bindtap="logout">退出</view>
+</view>
+
+<!-- 普通用户：我的订单 + 我发布的 -->
+<block wx:if="{{isUser}}">
+  <view class="card">
+    <view class="card-title">我的订单（买的）</view>
+    <view class="empty" wx:if="{{!myOrders.length}}">暂无订单，去书库逛逛吧</view>
+    <view class="row-item" wx:for="{{myOrders}}" wx:key="id">
+      <view class="r-info">
+        <view class="r-title">{{item.title}} <text class="r-price">¥{{item.price}}</text></view>
+        <view class="r-sub">{{item.seller}} · {{item.applyTime}}</view>
+      </view>
+      <button class="btn btn-danger r-btn" size="mini" wx:if="{{item.status === 0}}" data-id="{{item.id}}" bindtap="doCancel">取消</button>
+      <view class="tag {{item.status === 0 ? 'tag-warn' : (item.status === 1 ? 'tag-success' : 'tag-plain')}}">{{item.statusText}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">我发布的</view>
+    <view class="empty" wx:if="{{!myListings.length}}">还没有发布图书，扫描 ISBN 即可上架</view>
+    <view class="row-item" wx:for="{{myListings}}" wx:key="isbn">
+      <view class="r-info" data-isbn="{{item.isbn}}" bindtap="openDetail">
+        <view class="r-title">{{item.title}} <text class="r-price">¥{{item.price}}</text></view>
+        <view class="r-sub">ISBN {{item.isbn}}</view>
+      </view>
+      <button class="btn btn-warning r-btn" size="mini" wx:if="{{item.status === 0}}" data-isbn="{{item.isbn}}" bindtap="shelfOff">下架</button>
+      <view class="tag {{item.status === 0 ? 'tag-success' : (item.status === 1 ? 'tag-danger' : 'tag-plain')}}">{{item.statusText}}</view>
+    </view>
+  </view>
+</block>
+
+<!-- 管理员：统计 + 全部订单 + 书库 -->
+<block wx:if="{{isAdmin}}">
+  <view class="card">
+    <view class="card-title">扫码统计</view>
+    <view class="stats-row">
+      <view class="stat"><view class="stat-num">{{stats.today}}</view><view class="stat-label">今日</view></view>
+      <view class="stat"><view class="stat-num">{{stats.total}}</view><view class="stat-label">累计</view></view>
+      <view class="stat"><view class="stat-num">{{stats.shelf}}</view><view class="stat-label">已上架</view></view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">全部订单（共 {{allOrders.length}} 笔）</view>
+    <view class="empty" wx:if="{{!allOrders.length}}">暂无订单</view>
+    <view class="row-item" wx:for="{{allOrders}}" wx:key="id">
+      <view class="r-info">
+        <view class="r-title">{{item.title}} <text class="r-price">¥{{item.price}}</text></view>
+        <view class="r-sub">{{item.buyer}} 买 · {{item.seller}} 卖 · {{item.applyTime}}</view>
+      </view>
+      <view class="r-btns" wx:if="{{item.status === 0}}">
+        <button class="btn btn-success r-btn" size="mini" data-id="{{item.id}}" bindtap="doConfirm">成交</button>
+        <button class="btn btn-danger r-btn" size="mini" data-id="{{item.id}}" bindtap="doReject">拒绝</button>
+      </view>
+      <view class="tag {{item.status === 0 ? 'tag-warn' : (item.status === 1 ? 'tag-success' : 'tag-plain')}}">{{item.statusText}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">本地书库（共 {{books.length}} 本）</view>
+    <view class="bk-row" wx:for="{{books}}" wx:key="isbn" data-isbn="{{item.isbn}}" bindtap="openDetail">
+      <view class="bk-title">{{item.title}}</view>
+      <view class="bk-count">¥{{item.price}} · {{item.statusText}}</view>
+    </view>
+  </view>
+</block>

@@ -1,8 +1,11 @@
 package com.book.controller;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.book.entity.BookInfo;
+import com.book.entity.SysUser;
 import com.book.annotation.OpLog;
 import com.book.service.BookInfoService;
+import com.book.service.SysUserService;
 import com.book.util.Result;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -17,6 +20,9 @@ public class BookInfoController {
 
     @Autowired
     private BookInfoService bookInfoService;
+
+    @Autowired
+    private SysUserService sysUserService;
 
     // 分页查询（支持书名/作者/分类模糊搜索、状态精确筛选）
     @GetMapping("/page")
@@ -44,16 +50,17 @@ public class BookInfoController {
         return Result.success(bookInfo);
     }
 
-    // 新增图书
-    @OpLog(description = "新增图书", type = 1)
+    // 新增图书（管理员上架，自动记录卖家为当前登录管理员）
+    @OpLog(description = "上架图书", type = 1)
     @PostMapping("/add")
     public Result<Void> add(@Valid @RequestBody BookInfo bookInfo) {
-        if (bookInfo.getAvailableNum() == null) {
-            bookInfo.setAvailableNum(bookInfo.getTotalNum());
-        }
         if (bookInfo.getBookStatus() == null) {
             bookInfo.setBookStatus(0);
         }
+        Long sellerId = StpUtil.getLoginIdAsLong();
+        SysUser seller = sysUserService.getById(sellerId);
+        bookInfo.setSellerId(sellerId);
+        bookInfo.setSellerName(seller != null ? seller.getRealName() : null);
         bookInfoService.save(bookInfo);
         return Result.success();
     }

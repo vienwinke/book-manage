@@ -1,1 +1,0 @@
-import{r}from"./request-DEtri_uE.js";const s=o=>r.get("/borrow/page",{params:o}),p=o=>r.post("/borrow/apply",o),a=(o,e)=>r.post(`/borrow/approve/${o}`,{adminRemark:e}),w=(o,e)=>r.post(`/borrow/reject/${o}`,{adminRemark:e}),c=o=>r.post(`/borrow/return/${o}`),n=o=>r.delete(`/borrow/delete/${o}`);export{p as a,a as b,w as c,n as d,s as p,c as r};
