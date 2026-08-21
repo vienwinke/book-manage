@@ -30,6 +30,8 @@ public class TradeController {
                                           @RequestParam(defaultValue = "10") Integer pageSize,
                                           @RequestParam(required = false) Integer status,
                                           @RequestParam(required = false) Long buyerId) {
+        pageNum = Math.max(pageNum == null ? 1 : pageNum, 1);
+        pageSize = Math.max(1, Math.min(pageSize, 50)); // 限制单页大小
         Page<TradeRecord> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<TradeRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(status != null, TradeRecord::getStatus, status)
@@ -128,10 +130,17 @@ public class TradeController {
         return Result.success();
     }
 
-    // 管理员删除订单
+    // 管理员删除订单（已成交订单不可删除，保留交易凭证）
     @OpLog(description = "删除订单", type = 3)
     @DeleteMapping("/delete/{id}")
     public Result<Void> delete(@PathVariable Long id) {
+        TradeRecord record = tradeRecordService.getById(id);
+        if (record == null) {
+            throw new BusinessException("订单不存在");
+        }
+        if (record.getStatus() != null && record.getStatus() == 1) {
+            throw new BusinessException("已成交订单不可删除");
+        }
         tradeRecordService.removeById(id);
         return Result.success();
     }

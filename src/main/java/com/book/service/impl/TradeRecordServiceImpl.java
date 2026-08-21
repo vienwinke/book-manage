@@ -32,12 +32,19 @@ public class TradeRecordServiceImpl extends ServiceImpl<TradeRecordMapper, Trade
     private BookInfoService bookInfoService;
 
     @Autowired
+    private com.book.mapper.BookInfoMapper bookInfoMapper;
+
+    @Autowired
     private SysUserService sysUserService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void applyOrder(TradeRecord record) {
-        BookInfo book = bookInfoService.getById(record.getBookId());
+        // 行锁锁定图书记录（FOR UPDATE），串行化同一本书的下单请求，
+        // 防止并发请求同时通过"待确认订单计数"检查，产生重复待确认订单
+        BookInfo book = bookInfoMapper.selectOne(new LambdaQueryWrapper<BookInfo>()
+                .eq(BookInfo::getId, record.getBookId())
+                .last("FOR UPDATE"));
         if (book == null) {
             throw new BusinessException("图书不存在");
         }
@@ -80,7 +87,10 @@ public class TradeRecordServiceImpl extends ServiceImpl<TradeRecordMapper, Trade
         if (record.getStatus() != STATUS_PENDING) {
             throw new BusinessException("该订单不在待确认状态");
         }
-        BookInfo book = bookInfoService.getById(record.getBookId());
+        // 行锁锁定图书记录（FOR UPDATE），防止并发成交时库存扣减丢失更新
+        BookInfo book = bookInfoMapper.selectOne(new LambdaQueryWrapper<BookInfo>()
+                .eq(BookInfo::getId, record.getBookId())
+                .last("FOR UPDATE"));
         if (book == null || book.getBookStatus() == null || book.getBookStatus() != BOOK_ON_SALE) {
             throw new BusinessException("图书已不在售，无法成交");
         }

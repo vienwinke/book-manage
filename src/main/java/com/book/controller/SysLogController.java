@@ -19,6 +19,8 @@ public class SysLogController {
     public Result<Page<SysLog>> page(@RequestParam(defaultValue = "1") Integer pageNum,
                                       @RequestParam(defaultValue = "10") Integer pageSize,
                                       @RequestParam(required = false) Integer logType) {
+        pageNum = Math.max(pageNum == null ? 1 : pageNum, 1);
+        pageSize = Math.max(1, Math.min(pageSize, 50)); // 限制单页大小
         Page<SysLog> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<SysLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(logType != null, SysLog::getLogType, logType)
