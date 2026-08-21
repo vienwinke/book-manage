@@ -14,6 +14,7 @@
       </el-select>
       <el-button type="primary" @click="loadData(1)">查询</el-button>
       <el-button @click="resetQuery">重置</el-button>
+      <el-button type="warning" @click="scanVisible = true">📷 扫码上架</el-button>
       <el-button type="success" @click="openForm()">上架图书</el-button>
     </div>
 
@@ -115,6 +116,9 @@
         <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 扫码上架 -->
+    <scan-book-dialog v-model="scanVisible" @success="loadData(1)" />
   </el-card>
 </template>
 
@@ -122,6 +126,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { pageBooks, addBook, updateBook, deleteBook } from '../api/book'
+import ScanBookDialog from '../components/ScanBookDialog.vue'
 
 const loading = ref(false)
 const list = ref([])
@@ -131,6 +136,7 @@ const query = reactive({ pageNum: 1, pageSize: 10, bookName: '', author: '', cat
 const categories = ['计算机', '教材', '小说', '文学', '历史', '科学', '其他']
 
 const dialogVisible = ref(false)
+const scanVisible = ref(false)
 const saving = ref(false)
 const formRef = ref(null)
 const emptyForm = () => ({
